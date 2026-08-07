@@ -191,7 +191,7 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
 /* ---------- mobile: bottom drawer ---------- */
 @media (max-width:700px){
   #panel{
-    top:auto;bottom:0;left:0;right:0;width:auto;max-height:min(72vh,560px);
+    top:auto;bottom:0;left:0;right:0;width:auto;max-height:min(56vh,430px);
     border-radius:20px 20px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom));
     backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);
     box-shadow:0 -12px 34px -14px rgba(0,0,0,.8);
@@ -208,7 +208,7 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
   #credit{font-size:10.5px;bottom:44px}
   #hint{display:none}
   #caption{top:8%;font-size:12.5px;padding:13px 16px}
-  .tab-body{max-height:44vh}
+  .tab-body{max-height:30vh}
 }
 @media (prefers-reduced-motion:reduce){
   #panel,#restore,#caption,#toast,#fade{transition-duration:.01ms!important}
@@ -619,7 +619,7 @@ const PALETTES=[
    snow:[168,190,214], star:[210,226,255], redAmt:1.0, purpAmt:1.0 },
  { id:"solarmax",accent:"#7dff5a",
    sky:[[8,7,18],[20,12,30]], green:[124,255,90], red:[255,54,74], purple:[198,88,255],
-   snow:[186,182,206], star:[255,238,220], redAmt:1.45, purpAmt:1.5 },
+   snow:[186,182,206], star:[255,238,220], redAmt:1.45, purpAmt:1.12 },
  { id:"arctic",  accent:"#48f2e0",
    sky:[[3,10,24],[6,20,42]], green:[72,242,224], red:[120,150,255], purple:[130,190,255],
    snow:[150,192,232], star:[200,232,255], redAmt:.75, purpAmt:.9 },
@@ -794,7 +794,7 @@ function stepSim(dt){
     case PHASE.QUIET:
       sim.compress=lerp(sim.compress,0,1-Math.pow(.001,dt));
       sim.tailStretch=lerp(sim.tailStretch,0,1-Math.pow(.001,dt));
-      sim.precipTarget=.06+base*.34;
+      sim.precipTarget=.085+base*.34;
       sim.windFlux=.28+base*.3;
       if(S.auto && !REDUCED){
         sim.nextAuto-=dt;
@@ -803,7 +803,7 @@ function stepSim(dt){
       break;
 
     case PHASE.ERUPTION:
-      sim.precipTarget=.06+base*.34;
+      sim.precipTarget=.085+base*.34;
       sim.windFlux=lerp(sim.windFlux,.4+sim.cme.strength*.3,dt*1.6);
       if(sim.phaseT>1.6){ sim.phase=PHASE.TRANSIT; sim.phaseT=0; }
       break;
@@ -1656,11 +1656,21 @@ function drawSky(alpha,scaleExtra){
     ctx.globalCompositeOperation="lighter";
     ctx.globalAlpha=alpha*.55;
     ctx.save();
-    /* mirror the curtain layer about the shoreline, squashed and dimmed */
+    /* mirror the curtain layer about the shoreline, strongly foreshortened */
     ctx.translate(0,lakeTop);
-    ctx.scale(1,-0.85);
-    ctx.drawImage(curCv,0,-lakeTop,W,H);
+    ctx.scale(1,-0.55);
+    /* the mirror axis is the horizon, but the image starts at the shoreline */
+    ctx.drawImage(curCv,0,-horizonY,W,H);
     ctx.restore();
+    ctx.globalCompositeOperation="source-over";
+    /* the reflection fades away with distance across the ice */
+    const fade=ctx.createLinearGradient(0,lakeTop,0,H);
+    fade.addColorStop(0,"rgba(2,4,9,0)");
+    fade.addColorStop(.55,"rgba(2,4,9,.55)");
+    fade.addColorStop(1,"rgba(2,4,9,.92)");
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=fade; ctx.fillRect(0,lakeTop,W,H-lakeTop);
+    ctx.globalCompositeOperation="lighter";
     /* a couple of ice cracks catching the light */
     ctx.globalAlpha=alpha*.055;
     ctx.strokeStyle=rgb(P.snow,1); ctx.lineWidth=1;
@@ -2171,8 +2181,13 @@ function initUI(){
     b.onclick=()=>{ S.lang=b.dataset.lang; applyLang(); pushURL(); };
   });
 
-  syncViewUI();
+    syncViewUI();
   applyLang();
+  /* on a phone the drawer starts closed so the sky is the first thing you see */
+  if(Math.min(window.innerWidth,window.innerHeight)<700){
+    $("panel").classList.add("hidden");
+    $("restore").classList.remove("hidden");
+  }
 }
 
 /* --- photo export --------------------------------------------------- */
