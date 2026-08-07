@@ -910,7 +910,7 @@ function spawnWind(i,rnd,anywhere){
   const r=rnd||Math.random.bind(Math);
   const x=anywhere? r() : (r()*.08);
   wind[o]  = x;                      /* normalised 0..1 across the gap  */
-  wind[o+1]= (r()-.5)*1.5;           /* normalised vertical offset      */
+  wind[o+1]= (r()-.5)*.95;           /* normalised vertical offset      */
   wind[o+2]= .055+r()*.05;           /* vx in normalised units / s      */
   wind[o+3]= (r()-.5)*.012;
   wind[o+4]= 0;
@@ -929,11 +929,11 @@ function updateWind(dt){
     if(mode===0){
       const dx=x-ex, dy=y;
       const d=Math.hypot(dx,dy)+1e-5;
-      if(d<standoff*3.4 && dx<standoff*1.2){
+      if(d<standoff*4.2 && dx<standoff*1.6){
         /* steer away from Earth: flow around the magnetopause */
-        const push=(standoff*2.1/d)*(standoff*2.1/d)*.9;
-        vx+=(dx/d)*push*dt*1.4;
-        vy+=(dy/d)*push*dt*2.6;
+        const push=(standoff*2.4/d)*(standoff*2.4/d)*1.25;
+        vx+=(dx/d)*push*dt*1.5;
+        vy+=(dy/d)*push*dt*4.2;
         /* a fraction get pulled toward a polar cusp */
         if(wind[o+5]<0.55 && d<standoff*1.9){
           const pole=y<0?-1:1;
@@ -969,12 +969,13 @@ function updateWind(dt){
 
 function layoutSpace(){
   const z=S.zoom;
-  const cx=W*.5+space.camX, cy=H*.5+space.camY;
-  const span=Math.min(W*.86,H*1.5)*z;
-  space.sunR=Math.max(26,span*.085);
-  space.sunX=cx-span*.44; space.sunY=cy;
-  space.earthX=cx+span*.34; space.earthY=cy;
-  space.earthR=Math.max(5,span*.017);
+  /* keep the pair clear of the control panel on the right */
+  const cx=W*(isMobile?.48:.42)+space.camX, cy=H*.5+space.camY;
+  const span=Math.min(W*.74,H*1.25)*z;
+  space.sunR=Math.max(22,span*.085);
+  space.sunX=cx-span*.46; space.sunY=cy;
+  space.earthX=cx+span*.40; space.earthY=cy;
+  space.earthR=Math.max(6,span*.026);
 }
 /* wind-space (0..1 gap, y normalised by gap) → screen */
 function wx(x){ return lerp(space.sunX+space.sunR*.9, space.earthX, x); }
@@ -1059,12 +1060,12 @@ function drawSun(){
     const a=(i*2.4+sim.t*.05);
     const life=Math.sin(ph*Math.PI);
     if(life<=0) continue;
-    const lr=r*(.28+.22*((i*7919)%97)/97)*life;
-    const bx=x+Math.cos(a)*r*.96, by=y+Math.sin(a)*r*.96;
-    ctx.strokeStyle=`rgba(255,150,70,${.35*life})`;
-    ctx.lineWidth=Math.max(1,r*.045);
+    const lr=r*(.14+.10*((i*7919)%97)/97)*life;
+    const bx=x+Math.cos(a)*r*.9, by=y+Math.sin(a)*r*.9;
+    ctx.strokeStyle=`rgba(255,170,95,${.22*life})`;
+    ctx.lineWidth=Math.max(1,r*.04);
     ctx.beginPath();
-    ctx.arc(bx+Math.cos(a)*lr*.6,by+Math.sin(a)*lr*.6,lr,a+Math.PI*.65,a+Math.PI*1.35);
+    ctx.arc(bx+Math.cos(a)*lr,by+Math.sin(a)*lr,lr,a+Math.PI*.5,a+Math.PI*1.5);
     ctx.stroke();
   }
   /* eruption flare on the limb */
@@ -1151,18 +1152,27 @@ function drawFieldLines(){
 
 function drawWind(){
   if(!wind) return;
-  const size=Math.max(1.6,space.earthR*.42);
-  ctx.globalAlpha=.55;
-  const col=`rgba(170,215,255,`;
+  const gap=wgap();
+  const size=Math.max(.8,space.earthR*.10);
+  ctx.lineCap="round";
   for(let i=0;i<windN;i++){
     const o=i*WIND_STRIDE;
     const x=wx(wind[o]), y=wy(wind[o+1]);
     if(x<-40||x>W+40||y<-40||y>H+40) continue;
     const capt=wind[o+4]===1;
-    const a=capt?.85:.32+sim.windFlux*.3;
-    ctx.fillStyle=col+a.toFixed(3)+")";
-    const s=capt?size*1.5:size;
-    ctx.drawImage(SPR.dot,x-s,y-s,s*2,s*2);
+    if(capt){
+      /* captured particles glow as they spiral into the cusp */
+      const s=size*3.2;
+      ctx.globalAlpha=.9;
+      ctx.drawImage(tintSprite(SPR.dot,P.green),x-s,y-s,s*2,s*2);
+    }else{
+      /* a short streak along the velocity: reads as flow, not as dots */
+      const lx=wind[o+2]*gap*.075, ly=wind[o+3]*gap*.075;
+      ctx.globalAlpha=.14+sim.windFlux*.22;
+      ctx.strokeStyle="rgba(175,218,255,1)";
+      ctx.lineWidth=Math.max(.7,size);
+      ctx.beginPath(); ctx.moveTo(x-lx,y-ly); ctx.lineTo(x,y); ctx.stroke();
+    }
   }
   ctx.globalAlpha=1;
 }
@@ -1218,11 +1228,11 @@ function drawCME(){
   const R=wgap()*(.035+.055*c.strength)*(1+p*1.5);
   /* shock front */
   if(p>.03){
-    ctx.globalAlpha=clamp(.22+c.strength*.3,0,.6)*(1-clamp((p-.9)/.1,0,1)*.5);
-    ctx.strokeStyle="rgba(255,210,170,1)";
-    ctx.lineWidth=Math.max(1,R*.09);
+    ctx.globalAlpha=clamp(.10+c.strength*.16,0,.32)*(1-clamp((p-.9)/.1,0,1)*.6);
+    ctx.strokeStyle="rgba(255,214,180,1)";
+    ctx.lineWidth=Math.max(1,R*.05);
     ctx.beginPath();
-    ctx.ellipse(x+R*.55,y,R*.55,R*1.25,0,-1.15,1.15);
+    ctx.ellipse(x+R*.42,y,R*.42,R*1.05,0,-1.1,1.1);
     ctx.stroke();
   }
   /* the cloud itself */
@@ -1234,7 +1244,7 @@ function drawCME(){
     const px=x+Math.cos(a)*rr*1.15+wob, py=y+Math.sin(a)*rr*.9;
     const s=R*(.16+rnd()*.26);
     ctx.globalAlpha=(.10+.22*rnd())*(1-p*.25);
-    ctx.drawImage(SPR.soft,px-s,py-s,s*2,s*2);
+    ctx.drawImage(tintSprite(SPR.soft,[255,196,142]),px-s,py-s,s*2,s*2);
   }
   ctx.globalAlpha=clamp(.35*(1-p*.4),0,.6);
   const hr=R*3.2;
@@ -1251,6 +1261,7 @@ function spaceLabel(text,x,y,align,alpha){
   ctx.fillText(text,x+1,y+1);
   ctx.fillStyle="rgba(226,238,255,.86)";
   ctx.fillText(text,x,y);
+  ctx.textAlign="left";
   ctx.globalAlpha=1;
 }
 function drawSpaceLabels(){
@@ -1258,9 +1269,9 @@ function drawSpaceLabels(){
   if(a<=0.01) return;
   const R=space.earthR;
   spaceLabel(T("lblSun"),space.sunX,space.sunY+space.sunR*2.4,"center",a*.9);
-  spaceLabel(T("lblEarth"),space.earthX,space.earthY+R*9.5,"center",a*.9);
+  spaceLabel(T("lblEarth"),space.earthX,space.earthY-R*4.6,"center",a*.9);
   spaceLabel(T("lblShock"),space.earthX-R*8.6,space.earthY-R*3.2,"right",a);
-  spaceLabel(T("lblTail"),space.earthX+R*13,space.earthY+R*3.4,"left",a);
+  spaceLabel(T("lblTail"),space.earthX+R*2.2,space.earthY+R*9.2,"left",a);
   spaceLabel(T("lblCusp"),space.earthX-R*2.6,space.earthY-R*3.0,"right",a);
   spaceLabel(T("lblOval"),space.earthX+R*2.8,space.earthY+R*2.6,"left",a);
   spaceLabel(T("lblWind"),wx(.28),wy(-.55),"center",a*.75);
@@ -1314,9 +1325,9 @@ function buildStarLayer(){
     const a=.22+m*.78;
     g.fillStyle=`rgba(${P.star[0]|0},${P.star[1]|0},${P.star[2]|0},${a.toFixed(3)})`;
     g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
-    if(m>.8){
-      g.globalAlpha=a*.5;
-      g.drawImage(SPR.soft,x-r*7,y-r*7,r*14,r*14);
+    if(m>.86){
+      g.globalAlpha=a*.30;
+      g.drawImage(SPR.soft,x-r*3.4,y-r*3.4,r*6.8,r*6.8);
       g.globalAlpha=1;
     }
   }
@@ -1325,13 +1336,13 @@ function buildStarLayer(){
 /* --- the winter panorama, baked once per resize ------------------- */
 let landCv=null, horizonY=0, lakeTop=0, lakeBottom=0, snowCrestY=0;
 function buildLandscape(){
-  horizonY=Math.round(H*(isPortrait?.70:.66));
-  lakeTop=horizonY+Math.round(H*.055);
+  horizonY=Math.round(H*(isPortrait?.60:.58));
+  lakeTop=horizonY+Math.round(H*(isPortrait?.18:.22));
   lakeBottom=H;
-  landCv=mkCanvas(W*DPR,(H-horizonY+2)*DPR);
+  landCv=mkCanvas(W*DPR,(lakeTop-horizonY+2)*DPR);
   const g=landCv.getContext("2d");
   g.setTransform(DPR,0,0,DPR,0,0);
-  const h=H-horizonY+2;
+  const h=lakeTop-horizonY+2;
   const rnd=mulberry32(SEED^0x1a4d);
   const noise=makeNoise(SEED^0x77);
 
@@ -1469,7 +1480,7 @@ function drawCurtains(g,sc,pitchPx){
     const x0=gw*.5 - spanW*.5 + c.xOff*gw*.2;
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
-    const rw=Math.max(2.2,dx*2.5);
+    const rw=Math.max(2.0,dx*1.9);
     const t=sim.t;
     const drift=t*c.driftSpd*40;
     /* how tall / bright this curtain is right now */
@@ -1506,22 +1517,9 @@ function drawCurtains(g,sc,pitchPx){
       if(inten<=.012) continue;
       const hgt=hBase*hN*(.6+.7*iN);
       const bucket=clamp(Math.round((bucketBase*.75+ iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
-      g.globalAlpha=clamp(inten*.55,0,1);
+      g.globalAlpha=clamp(inten*.62,0,1);
       g.drawImage(raySprites[bucket], x-rw*.5, y-hgt, rw, hgt);
     }
-    /* the bright lower edge of the arc — a thin hot line */
-    g.globalAlpha=clamp(vis*.32,0,.85);
-    g.beginPath();
-    for(let i=0;i<nRays;i+=2){
-      const u=i/(nRays-1), x=x0+i*dx;
-      const fx=u*6.2*c.foldA+drift*.08+c.phase;
-      const fold=c.n1(fx)*.55 + c.n2(fx*2.35+11)*.28 + c.n3(fx*5.1+31)*.13;
-      const y=baseY + fold*gh*(.055+.055*near+p*.045);
-      i?g.lineTo(x,y):g.moveTo(x,y);
-    }
-    g.strokeStyle=rgb(P.green,1);
-    g.lineWidth=Math.max(1,gh*.0035*(1+near));
-    g.stroke();
   }
   g.globalAlpha=1;
   g.globalCompositeOperation="source-over";
@@ -1565,12 +1563,14 @@ function updateSnow(dt){
 function drawSnow(){
   if(!snow) return;
   const tint=P.snow;
+  ctx.fillStyle=`rgb(${(tint[0]*.45+255*.55)|0},${(tint[1]*.45+255*.55)|0},${(tint[2]*.45+255*.55)|0})`;
   for(let i=0;i<snowN;i++){
     const o=i*SNOW_STRIDE, L=snow[o+4];
     const x=snow[o]*W, y=snow[o+1]*H;
-    const s=(.9+L*1.5);
-    ctx.globalAlpha=(.20+L*.30);
-    ctx.fillStyle=`rgb(${(tint[0]*.6+255*.4)|0},${(tint[1]*.6+255*.4)|0},${(tint[2]*.6+255*.4)|0})`;
+    /* flakes fade out toward the top of the frame — they belong to the foreground */
+    const depthFade=smoothstep((snow[o+1]-.06)/.5);
+    const s=(.5+L*.75);
+    ctx.globalAlpha=(.10+L*.16)*depthFade;
     ctx.beginPath(); ctx.arc(x,y,s,0,TAU); ctx.fill();
   }
   ctx.globalAlpha=1;
@@ -1654,38 +1654,41 @@ function drawSky(alpha,scaleExtra){
     lg.addColorStop(1,"rgb(2,4,9)");
     ctx.fillStyle=lg; ctx.fillRect(0,lakeTop,W,H-lakeTop);
     ctx.globalCompositeOperation="lighter";
-    ctx.globalAlpha=alpha*.30;
+    ctx.globalAlpha=alpha*.55;
     ctx.save();
-    ctx.translate(0,lakeTop*2+H*.02);
-    ctx.scale(1,-1);
-    ctx.drawImage(curCv,0,0,W,H);
+    /* mirror the curtain layer about the shoreline, squashed and dimmed */
+    ctx.translate(0,lakeTop);
+    ctx.scale(1,-0.85);
+    ctx.drawImage(curCv,0,-lakeTop,W,H);
     ctx.restore();
     /* a couple of ice cracks catching the light */
-    ctx.globalAlpha=alpha*.10;
+    ctx.globalAlpha=alpha*.055;
     ctx.strokeStyle=rgb(P.snow,1); ctx.lineWidth=1;
     const rnd=mulberry32(SEED^0x1ce);
-    for(let i=0;i<6;i++){
+    for(let i=0;i<7;i++){
       const y=lakeTop+(H-lakeTop)*(.15+rnd()*.8);
-      ctx.beginPath(); ctx.moveTo(rnd()*W*.4,y); ctx.lineTo(rnd()*W*.6+W*.4,y+(rnd()-.5)*10); ctx.stroke();
+      const x0=rnd()*W*.8, len=W*(.06+rnd()*.16);
+      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x0+len,y+(rnd()-.5)*8); ctx.stroke();
     }
     ctx.restore();
     ctx.globalCompositeOperation="source-over";
     ctx.globalAlpha=alpha;
   }
 
-  /* landscape silhouette */
-  if(landCv) ctx.drawImage(landCv,0,horizonY-2,W,H-horizonY+2);
+  /* landscape silhouette, sitting on the shoreline */
+  if(landCv) ctx.drawImage(landCv,0,horizonY-2,W,lakeTop-horizonY+2);
 
   /* snow surfaces breathe with the dominant aurora colour */
   {
     const glow=clamp(sim.precip,0,1)*(.10+.05*Math.sin(sim.t*.5));
-    const gg=ctx.createLinearGradient(0,horizonY-H*.03,0,H);
-    gg.addColorStop(0,rgb(P.green,glow*.55));
-    gg.addColorStop(.45,rgb(P.green,glow*.20));
+    const gg=ctx.createLinearGradient(0,horizonY-H*.06,0,H);
+    gg.addColorStop(0,rgb(P.green,0));
+    gg.addColorStop(.18,rgb(P.green,glow*.42));
+    gg.addColorStop(.55,rgb(P.green,glow*.16));
     gg.addColorStop(1,rgb(P.green,0));
     ctx.globalCompositeOperation="lighter";
     ctx.globalAlpha=alpha;
-    ctx.fillStyle=gg; ctx.fillRect(0,horizonY-H*.03,W,H-horizonY+H*.03);
+    ctx.fillStyle=gg; ctx.fillRect(0,horizonY-H*.06,W,H-horizonY+H*.06);
     ctx.globalCompositeOperation="source-over";
   }
   /* the cabin window */
