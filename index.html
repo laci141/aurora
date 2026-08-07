@@ -2087,8 +2087,8 @@ function frame(now){
   ctx.globalAlpha=1;
   ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
   const m=viewMix;
-  if(m<.999) drawSpace(1-m, lerp(1,1.5,m));
-  if(m>.001) drawSky(m, lerp(.72,1,m));
+  if(m<.999) drawSpace(1-m, lerp(1,1.45,m));
+  if(m>.001) drawSky(m, lerp(1.14,1,m));
 
   refreshTick+=dt;
   if(refreshTick>.25){ refreshTick=0; $("kpEff").textContent=fmt(sim.effKp,1); }
