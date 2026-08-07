@@ -292,6 +292,8 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
       <span class="sw"><input type="checkbox" id="tSnow" checked><i></i></span></label>
     <label class="sw-row sky-only"><span class="t" data-i18n="lake"></span>
       <span class="sw"><input type="checkbox" id="tLake" checked><i></i></span></label>
+    <label class="sw-row sky-only"><span class="t" data-i18n="moon"></span>
+      <span class="sw"><input type="checkbox" id="tMoon"><i></i></span></label>
     <label class="sw-row"><span class="t" data-i18n="labels"></span>
       <span class="sw"><input type="checkbox" id="tLabels"><i></i></span></label>
   </div>
@@ -306,6 +308,10 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
     <div class="row">
       <div class="lbl"><span data-i18n="boost"></span><span class="v" id="boostVal">15%</span></div>
       <input type="range" id="boost" min="0" max="25" step="1" value="15">
+    </div>
+    <div class="row">
+      <div class="lbl"><span data-i18n="bloom"></span><span class="v" id="bloomVal">45%</span></div>
+      <input type="range" id="bloom" min="0" max="100" step="1" value="45">
     </div>
     <div class="row">
       <div class="lbl"><span data-i18n="starDensity"></span><span class="v" id="starsVal">100%</span></div>
@@ -418,10 +424,12 @@ const S={
   flow:  qBool("flow",true),
   snow:  qBool("snow",true),
   lake:  qBool("lake",true),
+  moon:  qBool("moon",false),
   labels:qBool("labels",false),
   pal:   Math.round(qNum("pal",0,0,3)),
   autoPal:qBool("autopal",false),
   boost: qNum("boost",15,0,25),
+  bloom: qNum("bloom",45,0,100),
   stars: qNum("stars",100,20,180),
   perf:  qBool("perf",true),
   lang:  Q.get("lang") || localStorage.getItem("aurora.lang") || "en"
@@ -453,9 +461,9 @@ const I18N={
   kp:"Solar activity (Kp)",launchCME:"⚡ Launch CME",autoStorm:"Auto-storm",
   speed:"Time speed",pitch:"Camera pitch",zoom:"Zoom",camDrift:"Camera drift",
   secLayers:"Layers",fieldLines:"Field lines",particleFlow:"Particle flow",
-  snowfall:"Snowfall",lake:"Lake reflection",labels:"Labels",
+  snowfall:"Snowfall",lake:"Lake reflection",moon:"Moon",labels:"Labels",
   secPalette:"Palette",autoPalette:"Auto-switch palette",
-  boost:"Colour boost",starDensity:"Star density",perfGuard:"Performance guard",
+  boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",perfGuard:"Performance guard",
   perfNote:"Thins rays, snow and particles if the frame rate drops.",
   secActions:"Actions",photo:"📷 Photo",copyLink:"🔗 Copy link",projector:"▶ Projector",hideUI:"👁 Hide UI",
   seedNote:"The link carries the seed and every setting — the same sky comes back exactly.",
@@ -491,9 +499,9 @@ const I18N={
   kp:"Naptevékenység (Kp)",launchCME:"⚡ CME indítása",autoStorm:"Auto-vihar",
   speed:"Idősebesség",pitch:"Kameraszög",zoom:"Nagyítás",camDrift:"Kamera-sodródás",
   secLayers:"Rétegek",fieldLines:"Erővonalak",particleFlow:"Részecskeáram",
-  snowfall:"Hóesés",lake:"Tükröződés a tavon",labels:"Feliratok",
+  snowfall:"Hóesés",lake:"Tükröződés a tavon",moon:"Hold",labels:"Feliratok",
   secPalette:"Paletta",autoPalette:"Automatikus palettaváltás",
-  boost:"Színerősítés",starDensity:"Csillagsűrűség",perfGuard:"Teljesítményőr",
+  boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",perfGuard:"Teljesítményőr",
   perfNote:"Ritkítja a sugarakat, a havat és a részecskéket, ha esik a képkockaszám.",
   secActions:"Műveletek",photo:"📷 Fotó",copyLink:"🔗 Link másolása",projector:"▶ Vetítő",hideUI:"👁 Felület elrejtése",
   seedNote:"A link viszi a magot és minden beállítást — ugyanaz az égbolt tér vissza.",
@@ -529,9 +537,9 @@ const I18N={
   kp:"Activitate solară (Kp)",launchCME:"⚡ Lansează CME",autoStorm:"Furtună automată",
   speed:"Viteza timpului",pitch:"Unghiul camerei",zoom:"Zoom",camDrift:"Derivă de cameră",
   secLayers:"Straturi",fieldLines:"Linii de câmp",particleFlow:"Flux de particule",
-  snowfall:"Ninsoare",lake:"Reflexie pe lac",labels:"Etichete",
+  snowfall:"Ninsoare",lake:"Reflexie pe lac",moon:"Luna",labels:"Etichete",
   secPalette:"Paletă",autoPalette:"Schimbare automată",
-  boost:"Intensitate culoare",starDensity:"Densitatea stelelor",perfGuard:"Gardă de performanță",
+  boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",perfGuard:"Gardă de performanță",
   perfNote:"Reduce razele, fulgii și particulele dacă scade rata de cadre.",
   secActions:"Acțiuni",photo:"📷 Fotografie",copyLink:"🔗 Copiază linkul",projector:"▶ Proiector",hideUI:"👁 Ascunde interfața",
   seedNote:"Linkul poartă sămânța și toate setările — același cer revine exact.",
@@ -567,9 +575,9 @@ const I18N={
   kp:"Sonnenaktivität (Kp)",launchCME:"⚡ CME starten",autoStorm:"Auto-Sturm",
   speed:"Zeittempo",pitch:"Kameraneigung",zoom:"Zoom",camDrift:"Kameradrift",
   secLayers:"Ebenen",fieldLines:"Feldlinien",particleFlow:"Teilchenstrom",
-  snowfall:"Schneefall",lake:"Spiegelung im See",labels:"Beschriftungen",
+  snowfall:"Schneefall",lake:"Spiegelung im See",moon:"Mond",labels:"Beschriftungen",
   secPalette:"Palette",autoPalette:"Palette automatisch wechseln",
-  boost:"Farbverstärkung",starDensity:"Sterndichte",perfGuard:"Leistungswächter",
+  boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",perfGuard:"Leistungswächter",
   perfNote:"Reduziert Strahlen, Schnee und Teilchen, wenn die Bildrate fällt.",
   secActions:"Aktionen",photo:"📷 Foto",copyLink:"🔗 Link kopieren",projector:"▶ Projektor",hideUI:"👁 UI ausblenden",
   seedNote:"Der Link trägt den Seed und alle Einstellungen — derselbe Himmel kehrt exakt zurück.",
@@ -708,6 +716,38 @@ function buildSprites(){
   SPR.dot=glowSprite(32,[[0,"rgba(255,255,255,1)"],[.35,"rgba(255,255,255,.6)"],[1,"rgba(255,255,255,0)"]]);
   SPR.soft=glowSprite(128,[[0,"rgba(255,255,255,.7)"],[.5,"rgba(255,255,255,.16)"],[1,"rgba(255,255,255,0)"]]);
   SPR.flake=glowSprite(16,[[0,"rgba(255,255,255,1)"],[.45,"rgba(255,255,255,.55)"],[1,"rgba(255,255,255,0)"]]);
+  /* solar-wind streak: bright head on the right, long tapering tail leftward */
+  {
+    const w=96,h=10,c=mkCanvas(w,h),g=c.getContext("2d");
+    const grad=g.createLinearGradient(0,0,w,0);
+    grad.addColorStop(0,"rgba(150,200,255,0)");
+    grad.addColorStop(.55,"rgba(165,210,255,.28)");
+    grad.addColorStop(.86,"rgba(190,225,255,.75)");
+    grad.addColorStop(1,"rgba(235,246,255,1)");
+    g.fillStyle=grad; g.fillRect(0,0,w,h);
+    /* soften top and bottom so overlapping streaks fuse into a stream */
+    const v=g.createLinearGradient(0,0,0,h);
+    v.addColorStop(0,"rgba(0,0,0,1)"); v.addColorStop(.5,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,1)");
+    g.globalCompositeOperation="destination-out";
+    g.fillStyle=v; g.fillRect(0,0,w,h);
+    SPR.streak=c;
+  }
+  /* the moon: shaded disc with a few soft craters, baked once */
+  {
+    const s=96,c=mkCanvas(s,s),g=c.getContext("2d");
+    const r=s/2;
+    const grad=g.createRadialGradient(r*.82,r*.82,r*.1,r,r,r);
+    grad.addColorStop(0,"#f4f2e9"); grad.addColorStop(.75,"#d8d6cc"); grad.addColorStop(1,"#b9b8b0");
+    g.fillStyle=grad; g.beginPath(); g.arc(r,r,r*.96,0,TAU); g.fill();
+    const rnd=mulberry32(0x300d);
+    g.fillStyle="rgba(140,140,135,.30)";
+    for(let i=0;i<9;i++){
+      const a=rnd()*TAU, rr=Math.sqrt(rnd())*r*.7;
+      const cx=r+Math.cos(a)*rr, cy=r+Math.sin(a)*rr;
+      g.beginPath(); g.arc(cx,cy,r*(.05+rnd()*.10),0,TAU); g.fill();
+    }
+    SPR.moon=c;
+  }
 }
 buildSprites();
 
@@ -729,17 +769,23 @@ function buildRaySprites(force){
     const c=mkCanvas(RAY_W,RAY_H), g=c.getContext("2d");
     const grad=g.createLinearGradient(0,RAY_H,0,0); /* bottom → top */
     const redMix=clamp(f*1.15,0,1)*P.redAmt;
-    const purp=clamp((f-.42)/.58,0,1)*P.purpAmt;
+    const purp=clamp((f-.38)/.62,0,1)*P.purpAmt;
     const G=P.green,R=P.red,U=P.purple;
-    /* very bottom: nitrogen skirt on top of the green edge */
-    const bot=mixRGB(G,U,purp*.75);
+    const WHT=[255,255,255];
+    /* colours drawn from real aurora photography: a white-hot green core
+       at the base, saturated emerald above it, luminous red at the tops,
+       and a magenta-pink nitrogen skirt below during strong storms */
+    const pink=mixRGB(U,[255,120,190],.55);          /* purple pushed toward magenta */
+    const core=mixRGB(G,WHT,.42+f*.14);              /* the hot lower edge */
+    const bot=mixRGB(G,pink,purp*.85);
     grad.addColorStop(0,   rgb(bot,0));
-    grad.addColorStop(.035,rgb(bot,clamp(.55*boost*(.5+.5*purp),0,1)));
-    grad.addColorStop(.10, rgb(mixRGB(G,U,purp*.35),clamp(.95*boost,0,1)));
-    grad.addColorStop(.22, rgb(G,clamp(.88*boost,0,1)));
-    grad.addColorStop(.42, rgb(mixRGB(G,R,redMix*.30),clamp(.52*boost,0,1)));
-    grad.addColorStop(.64, rgb(mixRGB(G,R,redMix*.62),clamp(.26*boost,0,1)));
-    grad.addColorStop(.84, rgb(mixRGB(G,R,redMix*.88),clamp(.09*boost,0,1)));
+    grad.addColorStop(.030,rgb(bot,clamp(.72*boost*(.35+.65*purp),0,1)));
+    grad.addColorStop(.075,rgb(mixRGB(core,pink,purp*.30),clamp(1.0*boost,0,1)));
+    grad.addColorStop(.13, rgb(core,clamp(1.0*boost,0,1)));
+    grad.addColorStop(.24, rgb(mixRGB(G,WHT,.10),clamp(.90*boost,0,1)));
+    grad.addColorStop(.44, rgb(mixRGB(G,R,redMix*.28),clamp(.55*boost,0,1)));
+    grad.addColorStop(.66, rgb(mixRGB(mixRGB(G,R,redMix*.62),WHT,.08),clamp(.30*boost,0,1)));
+    grad.addColorStop(.85, rgb(mixRGB(G,R,redMix*.9),clamp(.11*boost,0,1)));
     grad.addColorStop(1,   rgb(mixRGB(G,R,redMix),0));
     g.fillStyle=grad; g.fillRect(0,0,RAY_W,RAY_H);
     /* soften the vertical edges so neighbouring rays blend */
@@ -912,7 +958,7 @@ function spawnWind(i,rnd,anywhere){
   wind[o]  = x;                      /* normalised 0..1 across the gap  */
   wind[o+1]= (r()-.5)*.95;           /* normalised vertical offset      */
   wind[o+2]= .055+r()*.05;           /* vx in normalised units / s      */
-  wind[o+3]= (r()-.5)*.012;
+  wind[o+3]= (r()-.5)*.005;
   wind[o+4]= 0;
   wind[o+5]= r()*TAU;
 }
@@ -1154,7 +1200,7 @@ function drawWind(){
   if(!wind) return;
   const gap=wgap();
   const size=Math.max(.8,space.earthR*.10);
-  ctx.lineCap="round";
+  const baseTr=ctx.getTransform();
   for(let i=0;i<windN;i++){
     const o=i*WIND_STRIDE;
     const x=wx(wind[o]), y=wy(wind[o+1]);
@@ -1166,12 +1212,17 @@ function drawWind(){
       ctx.globalAlpha=.9;
       ctx.drawImage(tintSprite(SPR.dot,P.green),x-s,y-s,s*2,s*2);
     }else{
-      /* a short streak along the velocity: reads as flow, not as dots */
-      const lx=wind[o+2]*gap*.075, ly=wind[o+3]*gap*.075;
-      ctx.globalAlpha=.14+sim.windFlux*.22;
-      ctx.strokeStyle="rgba(175,218,255,1)";
-      ctx.lineWidth=Math.max(.7,size);
-      ctx.beginPath(); ctx.moveTo(x-lx,y-ly); ctx.lineTo(x,y); ctx.stroke();
+      /* a tapering light streak along the velocity — overlapping tails
+         fuse into a continuous stream instead of reading as fragments */
+      const vx=wind[o+2], vy=wind[o+3];
+      const sp=Math.hypot(vx,vy);
+      const len=clamp(sp*gap*(.55+sim.windFlux*.4),10,gap*.055);
+      const th=Math.max(1.4,size*1.6);
+      ctx.globalAlpha=.10+sim.windFlux*.16;
+      ctx.translate(x,y);
+      ctx.rotate(Math.atan2(vy,vx));
+      ctx.drawImage(SPR.streak,-len,-th/2,len,th);
+      ctx.setTransform(baseTr);
     }
   }
   ctx.globalAlpha=1;
@@ -1484,9 +1535,9 @@ function drawCurtains(g,sc,pitchPx){
     const t=sim.t;
     const drift=t*c.driftSpd*40;
     /* how tall / bright this curtain is right now */
-    const vis=clamp((p-depth*.16)*1.5,0,1.35);
+    const vis=clamp((p-depth*.16)*1.9,0,1.35);
     if(vis<=.02) continue;
-    const hBase=gh*(.10+ .48*p*near + .06*near);
+    const hBase=gh*(.13+ .48*p*near + .06*near);
     const bucketBase=clamp(p*1.15+depth*.05,0,1);
     /* surge --------------------------------------------------- */
     if(sim.surgeQueue>0 && c.surge<-100){
@@ -1576,6 +1627,27 @@ function drawSnow(){
   ctx.globalAlpha=1;
 }
 
+/* --- the moon ------------------------------------------------------ */
+function drawMoon(alpha,pitchPx){
+  const rnd=mulberry32(SEED^0x3007);
+  const mx=W*(.16+rnd()*.66);
+  const my=H*(.10+rnd()*.16)+pitchPx*.35+Math.sin(sim.t*.008)*H*.01;
+  const r=Math.max(16,Math.min(W,H)*.028);
+  ctx.globalCompositeOperation="lighter";
+  /* cold halo */
+  const hs=r*11;
+  ctx.globalAlpha=alpha*.20;
+  ctx.drawImage(tintSprite(SPR.soft,[190,215,255]),mx-hs/2,my-hs/2,hs,hs);
+  const hs2=r*4.2;
+  ctx.globalAlpha=alpha*.30;
+  ctx.drawImage(tintSprite(SPR.soft,[225,238,255]),mx-hs2/2,my-hs2/2,hs2,hs2);
+  ctx.globalCompositeOperation="source-over";
+  ctx.globalAlpha=alpha*.96;
+  ctx.drawImage(SPR.moon,mx-r,my-r,r*2,r*2);
+  ctx.globalAlpha=alpha;
+  moonX=mx; moonOn=true;
+}
+let moonX=0, moonOn=false;
 /* --- shooting stars ----------------------------------------------- */
 let shooter=null, nextShooter=30+Math.random()*70;
 function stepShooter(dt){
@@ -1618,7 +1690,7 @@ function drawSky(alpha,scaleExtra){
   const g=ctx.createLinearGradient(0,0,0,horizonY+H*.1);
   g.addColorStop(0,rgb(P.sky0,1));
   g.addColorStop(.62,rgb(P.sky1,1));
-  g.addColorStop(1,rgb(mixRGB(P.sky1,P.green,.06),1));
+  g.addColorStop(1,rgb(mixRGB(P.sky1,P.green,.13),1));
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
   /* stars — parallax moves them less than the curtains */
@@ -1628,6 +1700,7 @@ function drawSky(alpha,scaleExtra){
     ctx.drawImage(starCv,0,sy,W,H*1.25);
     ctx.globalAlpha=alpha;
   }
+  if(S.moon) drawMoon(alpha,pitchPx);
   drawShooter();
 
   /* curtains onto their own layer, then composited (and mirrored) */
@@ -1641,6 +1714,14 @@ function drawSky(alpha,scaleExtra){
   ctx.globalCompositeOperation="lighter";
   ctx.globalAlpha=alpha;
   ctx.drawImage(curCv,0,0,W,H);
+  /* bloom: the curtain layer once more, blurred and additive — the hazy
+     photographic glow. Skipped when the performance guard has tripped. */
+  if(S.bloom>0 && perf.tripped===0 && "filter" in ctx){
+    ctx.filter=`blur(${Math.round(6+S.bloom*.14)}px)`;
+    ctx.globalAlpha=alpha*(S.bloom/100)*.75;
+    ctx.drawImage(curCv,0,0,W,H);
+    ctx.filter="none";
+  }
   ctx.globalCompositeOperation="source-over";
 
   /* the frozen lake mirrors the sky */
@@ -1671,6 +1752,15 @@ function drawSky(alpha,scaleExtra){
     ctx.globalAlpha=alpha;
     ctx.fillStyle=fade; ctx.fillRect(0,lakeTop,W,H-lakeTop);
     ctx.globalCompositeOperation="lighter";
+    /* moon glint: a soft column of light on the ice */
+    if(S.moon){
+      const gl=ctx.createLinearGradient(moonX-W*.05,0,moonX+W*.05,0);
+      gl.addColorStop(0,"rgba(200,222,255,0)");
+      gl.addColorStop(.5,"rgba(210,228,255,.10)");
+      gl.addColorStop(1,"rgba(200,222,255,0)");
+      ctx.globalAlpha=alpha;
+      ctx.fillStyle=gl; ctx.fillRect(moonX-W*.05,lakeTop,W*.1,H-lakeTop);
+    }
     /* a couple of ice cracks catching the light */
     ctx.globalAlpha=alpha*.055;
     ctx.strokeStyle=rgb(P.snow,1); ctx.lineWidth=1;
@@ -1690,12 +1780,14 @@ function drawSky(alpha,scaleExtra){
 
   /* snow surfaces breathe with the dominant aurora colour */
   {
-    const glow=clamp(sim.precip,0,1)*(.10+.05*Math.sin(sim.t*.5));
+    const moonLift=S.moon?.045:0;   /* the moon cools and lifts the snow */
+    const glow=clamp(sim.precip,0,1)*(.10+.05*Math.sin(sim.t*.5))+moonLift;
+    const lit=S.moon?mixRGB(P.green,[200,222,255],.5):P.green;
     const gg=ctx.createLinearGradient(0,horizonY-H*.06,0,H);
-    gg.addColorStop(0,rgb(P.green,0));
-    gg.addColorStop(.18,rgb(P.green,glow*.42));
-    gg.addColorStop(.55,rgb(P.green,glow*.16));
-    gg.addColorStop(1,rgb(P.green,0));
+    gg.addColorStop(0,rgb(lit,0));
+    gg.addColorStop(.18,rgb(lit,glow*.42));
+    gg.addColorStop(.55,rgb(lit,glow*.16));
+    gg.addColorStop(1,rgb(lit,0));
     ctx.globalCompositeOperation="lighter";
     ctx.globalAlpha=alpha;
     ctx.fillStyle=gg; ctx.fillRect(0,horizonY-H*.06,W,H-horizonY+H*.06);
@@ -1913,9 +2005,9 @@ function pushURL(){
   const q=new URLSearchParams();
   q.set("seed",S.seed); q.set("view",S.view); q.set("kp",S.kp);
   q.set("speed",S.speed); q.set("pitch",Math.round(S.pitch)); q.set("zoom",S.zoom.toFixed(2));
-  q.set("pal",S.pal); q.set("boost",S.boost); q.set("stars",S.stars);
+  q.set("pal",S.pal); q.set("boost",S.boost); q.set("bloom",Math.round(S.bloom)); q.set("stars",S.stars);
   q.set("lang",S.lang);
-  const b={drift:S.drift,auto:S.auto,field:S.field,flow:S.flow,snow:S.snow,lake:S.lake,
+  const b={drift:S.drift,auto:S.auto,field:S.field,flow:S.flow,snow:S.snow,lake:S.lake,moon:S.moon,
            labels:S.labels,autopal:S.autoPal,perf:S.perf};
   for(const k in b) q.set(k,b[k]?"1":"0");
   history.replaceState(null,"","?"+q.toString());
@@ -1968,6 +2060,7 @@ function refreshReadouts(){
   $("pitchVal").textContent=fmt(Math.round(S.pitch))+"%";
   $("zoomVal").textContent=fmt(S.zoom,2)+"×";
   $("boostVal").textContent=fmt(S.boost)+"%";
+  $("bloomVal").textContent=fmt(Math.round(S.bloom))+"%";
   $("starsVal").textContent=fmt(S.stars)+"%";
   $("vMasterVal").textContent=fmt(Math.round(Audio.vol.master*100))+"%";
   $("vWindVal").textContent=fmt(Math.round(Audio.vol.wind*100))+"%";
@@ -2118,7 +2211,7 @@ function bindSwitch(id,key,fn){
 function initUI(){
   /* restore control values from state */
   $("kp").value=S.kp; $("speed").value=S.speed; $("pitch").value=S.pitch;
-  $("zoom").value=S.zoom; $("boost").value=S.boost; $("stars").value=S.stars;
+  $("zoom").value=S.zoom; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
   $("autoStorm").checked=S.auto; $("perfGuard").checked=S.perf;
   $("autoPal").checked=S.autoPal;
 
@@ -2127,6 +2220,7 @@ function initUI(){
   bindRange("pitch","pitch");
   bindRange("zoom","zoom");
   bindRange("boost","boost",()=>buildRaySprites(true));
+  bindRange("bloom","bloom");
   bindRange("stars","stars",()=>buildStarLayer());
   bindSwitch("autoStorm","auto");
   bindSwitch("drift","drift");
@@ -2134,6 +2228,7 @@ function initUI(){
   bindSwitch("tFlow","flow");
   bindSwitch("tSnow","snow");
   bindSwitch("tLake","lake");
+  bindSwitch("tMoon","moon");
   bindSwitch("tLabels","labels");
   bindSwitch("autoPal","autoPal");
   bindSwitch("perfGuard","perf");
