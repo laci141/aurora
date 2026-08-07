@@ -748,6 +748,44 @@ function buildSprites(){
     }
     SPR.moon=c;
   }
+  /* Earth as the satellites see it: ocean blue, cloud swirls, ice caps */
+  {
+    const sz=160,c=mkCanvas(sz,sz),g=c.getContext("2d"),r=sz/2;
+    g.save();
+    g.beginPath(); g.arc(r,r,r*.97,0,TAU); g.clip();
+    const og=g.createRadialGradient(r*.72,r*.66,r*.12,r,r,r*1.05);
+    og.addColorStop(0,"#8fd0ff"); og.addColorStop(.4,"#3487d8");
+    og.addColorStop(.75,"#1d569f"); og.addColorStop(1,"#123a74");
+    g.fillStyle=og; g.fillRect(0,0,sz,sz);
+    const rnd=mulberry32(0xEA47);
+    /* continents: clustered soft blobs, low contrast like from orbit */
+    for(let k=0;k<7;k++){
+      const cx=r+(rnd()-.5)*sz*.72, cy=r+(rnd()-.5)*sz*.72;
+      const col=rnd()<.6?"rgba(110,158,92,.55)":"rgba(158,146,96,.45)";
+      g.fillStyle=col;
+      for(let b=0;b<6;b++){
+        const bx=cx+(rnd()-.5)*sz*.16, by=cy+(rnd()-.5)*sz*.13;
+        const br=sz*(.03+rnd()*.055);
+        g.beginPath(); g.ellipse(bx,by,br*(1.2+rnd()),br,rnd()*TAU,0,TAU); g.fill();
+      }
+    }
+    /* polar ice */
+    g.fillStyle="rgba(235,245,255,.85)";
+    g.beginPath(); g.ellipse(r,r*.14,r*.55,r*.16,0,0,TAU); g.fill();
+    g.beginPath(); g.ellipse(r,sz-r*.12,r*.5,r*.14,0,0,TAU); g.fill();
+    /* cloud swirls: elongated soft streaks at varied angles */
+    for(let k=0;k<20;k++){
+      const cx=r+(rnd()-.5)*sz*.8, cy=r+(rnd()-.5)*sz*.8;
+      const ln=sz*(.10+rnd()*.22), th=sz*(.02+rnd()*.03);
+      g.save();
+      g.translate(cx,cy); g.rotate(rnd()*TAU);
+      g.globalAlpha=.20+rnd()*.30;
+      g.drawImage(SPR.soft,-ln/2,-th/2,ln,th);
+      g.restore();
+    }
+    g.restore();
+    SPR.earth=c;
+  }
 }
 buildSprites();
 
@@ -763,38 +801,45 @@ function buildRaySprites(force){
   if(!force && key===raySpritesKey) return;
   raySpritesKey=key;
   const boost=1+S.boost/100;
+  const WHT=[255,255,255];
+  /* three hue families along every curtain, like in real photographs:
+     emerald, teal-cyan and spring yellow-green */
+  const HUES=[P.green,
+              mixRGB(P.green,[56,214,255],.52),
+              mixRGB(P.green,[212,255,110],.42)];
   raySprites=[];
-  for(let b=0;b<RAY_BUCKETS;b++){
-    const f=b/(RAY_BUCKETS-1);                    /* 0 quiet → 1 extreme */
-    const c=mkCanvas(RAY_W,RAY_H), g=c.getContext("2d");
-    const grad=g.createLinearGradient(0,RAY_H,0,0); /* bottom → top */
-    const redMix=clamp(f*1.15,0,1)*P.redAmt;
-    const purp=clamp((f-.38)/.62,0,1)*P.purpAmt;
-    const G=P.green,R=P.red,U=P.purple;
-    const WHT=[255,255,255];
-    /* colours drawn from real aurora photography: a white-hot green core
-       at the base, saturated emerald above it, luminous red at the tops,
-       and a magenta-pink nitrogen skirt below during strong storms */
-    const pink=mixRGB(U,[255,120,190],.55);          /* purple pushed toward magenta */
-    const core=mixRGB(G,WHT,.42+f*.14);              /* the hot lower edge */
-    const bot=mixRGB(G,pink,purp*.85);
-    grad.addColorStop(0,   rgb(bot,0));
-    grad.addColorStop(.030,rgb(bot,clamp(.72*boost*(.35+.65*purp),0,1)));
-    grad.addColorStop(.075,rgb(mixRGB(core,pink,purp*.30),clamp(1.0*boost,0,1)));
-    grad.addColorStop(.13, rgb(core,clamp(1.0*boost,0,1)));
-    grad.addColorStop(.24, rgb(mixRGB(G,WHT,.10),clamp(.90*boost,0,1)));
-    grad.addColorStop(.44, rgb(mixRGB(G,R,redMix*.28),clamp(.55*boost,0,1)));
-    grad.addColorStop(.66, rgb(mixRGB(mixRGB(G,R,redMix*.62),WHT,.08),clamp(.30*boost,0,1)));
-    grad.addColorStop(.85, rgb(mixRGB(G,R,redMix*.9),clamp(.11*boost,0,1)));
-    grad.addColorStop(1,   rgb(mixRGB(G,R,redMix),0));
-    g.fillStyle=grad; g.fillRect(0,0,RAY_W,RAY_H);
-    /* soften the vertical edges so neighbouring rays blend */
-    const side=g.createLinearGradient(0,0,RAY_W,0);
-    side.addColorStop(0,"rgba(0,0,0,1)"); side.addColorStop(.5,"rgba(0,0,0,0)");
-    side.addColorStop(1,"rgba(0,0,0,1)");
-    g.globalCompositeOperation="destination-out";
-    g.fillStyle=side; g.fillRect(0,0,RAY_W,RAY_H);
-    raySprites.push(c);
+  for(let h=0;h<HUES.length;h++){
+    const row=[];
+    const G=HUES[h],R=P.red,U=P.purple;
+    for(let b=0;b<RAY_BUCKETS;b++){
+      const f=b/(RAY_BUCKETS-1);                    /* 0 quiet -> 1 extreme */
+      const c=mkCanvas(RAY_W,RAY_H), g=c.getContext("2d");
+      const grad=g.createLinearGradient(0,RAY_H,0,0); /* bottom -> top */
+      const redMix=clamp(f*1.15,0,1)*P.redAmt;
+      const purp=clamp((f-.38)/.62,0,1)*P.purpAmt;
+      const pink=mixRGB(U,[255,120,190],.55);
+      const core=mixRGB(G,WHT,.34+f*.14);
+      const bot=mixRGB(G,pink,purp*.85);
+      grad.addColorStop(0,   rgb(bot,0));
+      grad.addColorStop(.030,rgb(bot,clamp(.62*boost*(.35+.65*purp),0,1)));
+      grad.addColorStop(.075,rgb(mixRGB(core,pink,purp*.30),clamp(.88*boost,0,1)));
+      grad.addColorStop(.13, rgb(core,clamp(.86*boost,0,1)));
+      grad.addColorStop(.25, rgb(mixRGB(G,WHT,.08),clamp(.72*boost,0,1)));
+      grad.addColorStop(.45, rgb(mixRGB(G,R,redMix*.30),clamp(.42*boost,0,1)));
+      grad.addColorStop(.67, rgb(mixRGB(mixRGB(G,R,redMix*.62),WHT,.06),clamp(.20*boost,0,1)));
+      grad.addColorStop(.86, rgb(mixRGB(G,R,redMix*.9),clamp(.07*boost,0,1)));
+      grad.addColorStop(1,   rgb(mixRGB(G,R,redMix),0));
+      g.fillStyle=grad; g.fillRect(0,0,RAY_W,RAY_H);
+      /* feather the sides strongly so neighbours fuse into soft folds */
+      const side=g.createLinearGradient(0,0,RAY_W,0);
+      side.addColorStop(0,"rgba(0,0,0,1)"); side.addColorStop(.32,"rgba(0,0,0,.25)");
+      side.addColorStop(.5,"rgba(0,0,0,0)"); side.addColorStop(.68,"rgba(0,0,0,.25)");
+      side.addColorStop(1,"rgba(0,0,0,1)");
+      g.globalCompositeOperation="destination-out";
+      g.fillStyle=side; g.fillRect(0,0,RAY_W,RAY_H);
+      row.push(c);
+    }
+    raySprites.push(row);
   }
 }
 buildRaySprites(true);
@@ -1099,22 +1144,25 @@ function drawSun(){
     ctx.globalAlpha=.10+.16*(.5+.5*Math.sin(sim.t*.9+i));
     ctx.drawImage(SPR.soft,px-sz,py-sz,sz*2,sz*2);
   }
-  /* small prominence loops, even when quiet */
+  /* plasma jets breathing out of the limb — no drawn arcs, just light */
   ctx.globalAlpha=1;
-  for(let i=0;i<3;i++){
-    const ph=(sim.t*.09+i*.37)%1;
-    const a=(i*2.4+sim.t*.05);
+  for(let i=0;i<4;i++){
+    const ph=(sim.t*.07+i*.29)%1;
     const life=Math.sin(ph*Math.PI);
     if(life<=0) continue;
-    const lr=r*(.14+.10*((i*7919)%97)/97)*life;
-    const bx=x+Math.cos(a)*r*.9, by=y+Math.sin(a)*r*.9;
-    ctx.strokeStyle=`rgba(255,170,95,${.22*life})`;
-    ctx.lineWidth=Math.max(1,r*.04);
-    ctx.beginPath();
-    ctx.arc(bx+Math.cos(a)*lr,by+Math.sin(a)*lr,lr,a+Math.PI*.5,a+Math.PI*1.5);
-    ctx.stroke();
+    const a=i*1.83+Math.sin(sim.t*.05+i)*0.5;
+    const jr=r*(.55+.5*life);
+    const bx=x+Math.cos(a)*r*.94, by=y+Math.sin(a)*r*.94;
+    ctx.save();
+    ctx.translate(bx,by); ctx.rotate(a);
+    ctx.globalAlpha=.22*life;
+    ctx.drawImage(tintSprite(SPR.streak,[255,168,84]),-jr*.15,-r*.10,jr,r*.20);
+    ctx.globalAlpha=.30*life;
+    const ps=r*(.28+.3*life);
+    ctx.drawImage(tintSprite(SPR.soft,[255,150,70]),jr*.55-ps,-ps,ps*2,ps*2);
+    ctx.restore();
   }
-  /* eruption flare on the limb */
+  /* eruption: a fan of plasma bursting off the limb toward Earth */
   if(sim.phase===PHASE.ERUPTION && sim.cme){
     const k=clamp(sim.phaseT/1.6,0,1);
     const life=Math.sin(k*Math.PI);
@@ -1122,33 +1170,54 @@ function drawSun(){
     ctx.globalAlpha=life*.9;
     const fr=r*(1.6+k*2.2);
     ctx.drawImage(SPR.sunHalo,x+r*.6-fr/2,ey-fr/2,fr,fr);
-    ctx.strokeStyle=`rgba(255,220,160,${life*.8})`;
-    ctx.lineWidth=Math.max(1.5,r*.06);
-    ctx.beginPath();
-    ctx.arc(x+r*.8,ey,r*(.5+k*.9),-1.15,1.15);
-    ctx.stroke();
+    /* streaks fanning outward, lengthening as the burst grows */
+    const n=7;
+    for(let i=0;i<n;i++){
+      const ang=(i/(n-1)-.5)*1.15+Math.atan2(ey-y,r*2)*.3;
+      const ln=r*(1.2+k*2.6)*(.7+.3*Math.sin(i*2.7));
+      ctx.save();
+      ctx.translate(x+r*.82,ey); ctx.rotate(ang);
+      ctx.globalAlpha=life*(.24+.12*Math.sin(i*1.9+sim.t*3));
+      ctx.drawImage(tintSprite(SPR.streak,[255,214,150]),0,-r*.09,ln,r*.18);
+      ctx.restore();
+    }
     ctx.globalAlpha=1;
   }
 }
 
 function drawEarth(){
   const x=space.earthX,y=space.earthY,r=space.earthR;
-  /* atmosphere rim */
+  /* atmosphere glow */
   ctx.globalCompositeOperation="lighter";
   const ar=r*7;
   ctx.globalAlpha=.30;
-  ctx.drawImage(SPR.soft,x-ar/2,y-ar/2,ar,ar);
+  ctx.drawImage(tintSprite(SPR.soft,[120,190,255]),x-ar/2,y-ar/2,ar,ar);
   ctx.globalCompositeOperation="source-over";
   ctx.globalAlpha=1;
-  /* shaded disc, lit from the left (sunward) */
-  const g=ctx.createLinearGradient(x-r,y-r*.4,x+r,y+r*.4);
-  g.addColorStop(0,"#8fc6ff"); g.addColorStop(.42,"#2f6fb5");
-  g.addColorStop(.72,"#12294a"); g.addColorStop(1,"#070d18");
-  ctx.fillStyle=g;
-  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
-  ctx.strokeStyle="rgba(150,205,255,.35)";
-  ctx.lineWidth=Math.max(.6,r*.10);
-  ctx.beginPath(); ctx.arc(x,y,r*1.06,0,TAU); ctx.stroke();
+  /* the blue marble, slowly turning */
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(sim.t*.02);
+  ctx.drawImage(SPR.earth,-r,-r,r*2,r*2);
+  ctx.restore();
+  /* night falls on the anti-sunward side — shading stays sun-fixed */
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x,y,r*.985,0,TAU); ctx.clip();
+  const ng=ctx.createLinearGradient(x-r,y,x+r,y);
+  ng.addColorStop(0,"rgba(4,8,18,0)");
+  ng.addColorStop(.45,"rgba(4,8,18,0)");
+  ng.addColorStop(.72,"rgba(4,8,18,.55)");
+  ng.addColorStop(1,"rgba(3,6,14,.94)");
+  ctx.fillStyle=ng; ctx.fillRect(x-r,y-r,r*2,r*2);
+  ctx.restore();
+  /* thin bright limb on the day side */
+  const lg=ctx.createLinearGradient(x-r,y,x+r,y);
+  lg.addColorStop(0,"rgba(170,220,255,.5)");
+  lg.addColorStop(.55,"rgba(170,220,255,.12)");
+  lg.addColorStop(1,"rgba(170,220,255,0)");
+  ctx.strokeStyle=lg;
+  ctx.lineWidth=Math.max(.6,r*.08);
+  ctx.beginPath(); ctx.arc(x,y,r*1.03,0,TAU); ctx.stroke();
 }
 
 function drawFieldLines(){
@@ -1161,13 +1230,20 @@ function drawFieldLines(){
     const dayComp=fl.side?0:comp*.25*clamp(fl.L/5,.35,1);
     const tail=fl.side? 1+stretch*1.9*clamp((fl.L-1.6)/5,0,1) : 1;
     const flapA=fl.side? (.06+stretch*.22)*R*clamp((fl.L-2)/5,0,1) : 0;
-    const glow=.16+ (fl.side?.06:.10)*(1-dayComp) + sim.precip*.22;
+    /* the field is never still: each shell breathes and its glow pulses */
+    const breathe=1+Math.sin(sim.t*.42+fl.idx*.9+fl.flap)*.016;
+    const pulse=.85+.15*Math.sin(sim.t*.7+fl.idx*1.3+fl.side*2.1);
+    const glow=(.15+ (fl.side?.06:.10)*(1-dayComp) + sim.precip*.24)*pulse;
     ctx.beginPath();
     for(let j=0;j<N;j++){
+      const u=j/(N-1);
       let px=pts[j*2], py=pts[j*2+1];
-      px*= tail*(1-dayComp);
-      py*= (1-dayComp*.55);
+      px*= tail*(1-dayComp)*breathe;
+      py*= (1-dayComp*.55)*breathe;
       let sx=x0+px*R, sy=y0+py*R;
+      /* a slow wave travels along every line, day and night side alike */
+      sy+=Math.sin(u*4.6+sim.t*(.55+fl.idx*.11)+fl.flap)*R*.055*
+          (fl.side?1.3:.7)*clamp(fl.L/5,.4,1);
       if(flapA){
         sy+=Math.sin(px*.55 - sim.t*1.15 + fl.flap)*flapA*clamp(px/6,0,1);
       }
@@ -1259,7 +1335,7 @@ function drawCusps(){
 /* tiny tinted-sprite cache so we never build gradients per frame */
 const tintCache=new Map();
 function tintSprite(src,col){
-  const key=src.width+":"+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0);
+  const key=src.width+"x"+src.height+":"+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0);
   let c=tintCache.get(key);
   if(c) return c;
   c=mkCanvas(src.width,src.height);
@@ -1277,14 +1353,18 @@ function drawCME(){
   const p=(sim.phase===PHASE.ERUPTION)? clamp(sim.phaseT/1.6,0,1)*.05 : c.p;
   const x=wx(clamp(p,0,1)), y=wy(c.y*(1-p*.6));
   const R=wgap()*(.035+.055*c.strength)*(1+p*1.5);
-  /* shock front */
+  /* the compressed sheath ahead of the cloud — soft glow, no line */
   if(p>.03){
-    ctx.globalAlpha=clamp(.10+c.strength*.16,0,.32)*(1-clamp((p-.9)/.1,0,1)*.6);
-    ctx.strokeStyle="rgba(255,214,180,1)";
-    ctx.lineWidth=Math.max(1,R*.05);
-    ctx.beginPath();
-    ctx.ellipse(x+R*.42,y,R*.42,R*1.05,0,-1.1,1.1);
-    ctx.stroke();
+    const fade=(1-clamp((p-.9)/.1,0,1)*.6);
+    const m=9;
+    for(let i=0;i<m;i++){
+      const a=(i/(m-1)-.5)*2.0;
+      const rr=R*(1.02-.18*Math.abs(a));
+      const px=x+R*.42+Math.cos(a)*rr*.5, py=y+Math.sin(a)*rr*1.15;
+      const ss=R*(.30+.12*Math.cos(a*2));
+      ctx.globalAlpha=(.05+c.strength*.07)*fade*(1-Math.abs(a)*.35);
+      ctx.drawImage(tintSprite(SPR.soft,[255,206,160]),px-ss,py-ss,ss*2,ss*2);
+    }
   }
   /* the cloud itself */
   const rnd=mulberry32(SEED^0xc3e);
@@ -1568,8 +1648,12 @@ function drawCurtains(g,sc,pitchPx){
       if(inten<=.012) continue;
       const hgt=hBase*hN*(.6+.7*iN);
       const bucket=clamp(Math.round((bucketBase*.75+ iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
-      g.globalAlpha=clamp(inten*.62,0,1);
-      g.drawImage(raySprites[bucket], x-rw*.5, y-hgt, rw, hgt);
+      /* hue drifts slowly along the curtain: bands of teal and spring
+         green woven through the emerald, like the real thing */
+      const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
+      const hue=hueN<-.28?1:(hueN>.34?2:0);
+      g.globalAlpha=clamp(inten*.55,0,.92);
+      g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
     }
   }
   g.globalAlpha=1;
@@ -1627,27 +1711,55 @@ function drawSnow(){
   ctx.globalAlpha=1;
 }
 
-/* --- the moon ------------------------------------------------------ */
+/* --- the moon: it waxes and wanes as simulated time passes ---------- */
+const moonPhaseCache=new Map();
+function moonSprite(phase){
+  /* phase 0 = new, .5 = full, 1 = new again; cached in 40 steps */
+  const q=Math.round(phase*40)%40;
+  let c=moonPhaseCache.get(q);
+  if(c) return c;
+  const s=SPR.moon.width;
+  c=mkCanvas(s,s);
+  const g=c.getContext("2d");
+  g.drawImage(SPR.moon,0,0);
+  /* carve the shadow with an offset dark disc — waxing from the right */
+  const f=q/40;
+  const ill=(1-Math.cos(f*TAU))/2;          /* illuminated fraction */
+  const dir=f<.5?1:-1;                      /* shadow exits left, returns right */
+  const off=(1-ill*2)*dir*s*.98;
+  g.globalCompositeOperation="destination-out";
+  const sh=g.createRadialGradient(s/2+off,s/2,s*.30,s/2+off,s/2,s*.52);
+  sh.addColorStop(0,"rgba(0,0,0,1)");
+  sh.addColorStop(.86,"rgba(0,0,0,.96)");
+  sh.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=sh;
+  g.beginPath(); g.arc(s/2+off,s/2,s*.55,0,TAU); g.fill();
+  if(moonPhaseCache.size>44) moonPhaseCache.clear();
+  moonPhaseCache.set(q,c);
+  return c;
+}
 function drawMoon(alpha,pitchPx){
   const rnd=mulberry32(SEED^0x3007);
   const mx=W*(.16+rnd()*.66);
   const my=H*(.10+rnd()*.16)+pitchPx*.35+Math.sin(sim.t*.008)*H*.01;
   const r=Math.max(16,Math.min(W,H)*.028);
+  /* a full cycle takes ~4 minutes at 1x — visibly growing and shrinking */
+  const phase=(.5+sim.t/240)%1;
+  const ill=(1-Math.cos(phase*TAU))/2;
   ctx.globalCompositeOperation="lighter";
-  /* cold halo */
   const hs=r*11;
-  ctx.globalAlpha=alpha*.20;
+  ctx.globalAlpha=alpha*(.06+.17*ill);
   ctx.drawImage(tintSprite(SPR.soft,[190,215,255]),mx-hs/2,my-hs/2,hs,hs);
   const hs2=r*4.2;
-  ctx.globalAlpha=alpha*.30;
+  ctx.globalAlpha=alpha*(.10+.24*ill);
   ctx.drawImage(tintSprite(SPR.soft,[225,238,255]),mx-hs2/2,my-hs2/2,hs2,hs2);
   ctx.globalCompositeOperation="source-over";
   ctx.globalAlpha=alpha*.96;
-  ctx.drawImage(SPR.moon,mx-r,my-r,r*2,r*2);
+  ctx.drawImage(moonSprite(phase),mx-r,my-r,r*2,r*2);
   ctx.globalAlpha=alpha;
-  moonX=mx; moonOn=true;
+  moonX=mx; moonIll=ill; moonOn=true;
 }
-let moonX=0, moonOn=false;
+let moonX=0, moonOn=false, moonIll=1;
 /* --- shooting stars ----------------------------------------------- */
 let shooter=null, nextShooter=30+Math.random()*70;
 function stepShooter(dt){
@@ -1718,7 +1830,7 @@ function drawSky(alpha,scaleExtra){
      photographic glow. Skipped when the performance guard has tripped. */
   if(S.bloom>0 && perf.tripped===0 && "filter" in ctx){
     ctx.filter=`blur(${Math.round(6+S.bloom*.14)}px)`;
-    ctx.globalAlpha=alpha*(S.bloom/100)*.75;
+    ctx.globalAlpha=alpha*(S.bloom/100)*.6;
     ctx.drawImage(curCv,0,0,W,H);
     ctx.filter="none";
   }
@@ -1756,7 +1868,7 @@ function drawSky(alpha,scaleExtra){
     if(S.moon){
       const gl=ctx.createLinearGradient(moonX-W*.05,0,moonX+W*.05,0);
       gl.addColorStop(0,"rgba(200,222,255,0)");
-      gl.addColorStop(.5,"rgba(210,228,255,.10)");
+      gl.addColorStop(.5,`rgba(210,228,255,${(.03+.09*moonIll).toFixed(3)})`);
       gl.addColorStop(1,"rgba(200,222,255,0)");
       ctx.globalAlpha=alpha;
       ctx.fillStyle=gl; ctx.fillRect(moonX-W*.05,lakeTop,W*.1,H-lakeTop);
@@ -1780,7 +1892,7 @@ function drawSky(alpha,scaleExtra){
 
   /* snow surfaces breathe with the dominant aurora colour */
   {
-    const moonLift=S.moon?.045:0;   /* the moon cools and lifts the snow */
+    const moonLift=S.moon?.05*moonIll+.008:0;   /* the moon cools and lifts the snow */
     const glow=clamp(sim.precip,0,1)*(.10+.05*Math.sin(sim.t*.5))+moonLift;
     const lit=S.moon?mixRGB(P.green,[200,222,255],.5):P.green;
     const gg=ctx.createLinearGradient(0,horizonY-H*.06,0,H);
