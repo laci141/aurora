@@ -1635,6 +1635,12 @@ function drawCurtains(g,sc,pitchPx){
   /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
   const softCol=Math.min(softHi,.84);
   /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
+  /* storm rays broaden into wide soft columns: x2.5 at Kp7, x3.5 at Kp9 */
+  const wMul=kpn<=.55?1
+           :kpn<=.78?lerp(1,2.5,(kpn-.55)/.23)
+           :lerp(2.5,3.5,clamp((kpn-.78)/.22,0,1));
+  /* wider rays carry the same light spread out — keep the sky from clipping */
+  const wNorm=1/Math.pow(wMul,.9);
   const hb=kpn<=.333?lerp(1.0,1.50,clamp(kpn/.333,0,1))
          :kpn<=.55?lerp(1.50,1.30,(kpn-.333)/.217)
          :kpn<=.78?lerp(1.30,1.50,(kpn-.55)/.23)
@@ -1654,9 +1660,9 @@ function drawCurtains(g,sc,pitchPx){
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
     /* thin, near-vertical rays: narrow base width, varied per ray */
-    const rwBase=isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
+    const rwBase=(isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
                 :c.soft?Math.max(2.0,dx*1.9)
-                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi));
+                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi)))*wMul;
     const drift=t*c.driftSpd*40*(1+kpn*.9);
     const hBase=(isRibbon
       ? gh*(.05+.07*p)
@@ -1734,29 +1740,14 @@ function drawCurtains(g,sc,pitchPx){
       }else{
         hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
       }
-      g.globalAlpha=clamp(inten*.68,0,.94);
+      g.globalAlpha=clamp(inten*.68*wNorm,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
       if((iN>.72||isRibbon) && inten>.14 && !c.soft && softHi<.65){
         const coreW=Math.max(.8,rw*.22);
-        g.globalAlpha=clamp(inten*.27,0,.42);
+        g.globalAlpha=clamp(inten*.27*wNorm,0,.42);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
       }
-    }
-  }
-  /* veil / patch: big soft dim pools of light behind everything */
-  if(p>.30){
-    const nV=isMobile?4:7;
-    const vA=clamp((p-.30)*.2,0,.12);
-    for(let k=0;k<nV;k++){
-      const vx=gw*(.12+.76*(curtains[0].n1(k*3.17+sim.t*.008)*.5+.5));
-      const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
-      const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
-      g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
-      const vcs=[[255,92,180],[56,214,255],[178,126,255],[255,92,180],[255,200,90],[0,0,0],[230,60,120]];
-      const vv=vcs[k%7];
-      const vc=vv[0]===0?P.green:mixRGB(P.green,vv,.45);
-      g.drawImage(tintSprite(SPR.soft,vc),vx-vs,vy-vs*.6,vs*2,vs*1.2);
     }
   }
   g.globalAlpha=1;
