@@ -290,6 +290,10 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
       <span class="sw"><input type="checkbox" id="tFlow" checked><i></i></span></label>
     <label class="sw-row sky-only"><span class="t" data-i18n="snowfall"></span>
       <span class="sw"><input type="checkbox" id="tSnow" checked><i></i></span></label>
+    <div class="row sky-only" id="rowSnowSpd">
+      <div class="lbl"><span data-i18n="snowSpeed"></span><span class="v" id="snowSpdVal">1.0×</span></div>
+      <input type="range" id="snowSpd" min="0.2" max="3" step="0.05" value="1">
+    </div>
     <label class="sw-row sky-only"><span class="t" data-i18n="lake"></span>
       <span class="sw"><input type="checkbox" id="tLake" checked><i></i></span></label>
     <label class="sw-row sky-only"><span class="t" data-i18n="moon"></span>
@@ -423,6 +427,7 @@ const S={
   field: qBool("field",true),
   flow:  qBool("flow",true),
   snow:  qBool("snow",true),
+  snowSpd:qNum("snowspd",1,0.2,3),
   lake:  qBool("lake",true),
   moon:  qBool("moon",false),
   labels:qBool("labels",false),
@@ -461,7 +466,7 @@ const I18N={
   kp:"Solar activity (Kp)",launchCME:"⚡ Launch CME",autoStorm:"Auto-storm",
   speed:"Time speed",pitch:"Camera pitch",zoom:"Zoom",camDrift:"Camera drift",
   secLayers:"Layers",fieldLines:"Field lines",particleFlow:"Particle flow",
-  snowfall:"Snowfall",lake:"Lake reflection",moon:"Moon",labels:"Labels",
+  snowfall:"Snowfall",snowSpeed:"Snowfall speed",lake:"Lake reflection",moon:"Moon",labels:"Labels",
   secPalette:"Palette",autoPalette:"Auto-switch palette",
   boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",perfGuard:"Performance guard",
   perfNote:"Thins rays, snow and particles if the frame rate drops.",
@@ -499,7 +504,7 @@ const I18N={
   kp:"Naptevékenység (Kp)",launchCME:"⚡ CME indítása",autoStorm:"Auto-vihar",
   speed:"Idősebesség",pitch:"Kameraszög",zoom:"Nagyítás",camDrift:"Kamera-sodródás",
   secLayers:"Rétegek",fieldLines:"Erővonalak",particleFlow:"Részecskeáram",
-  snowfall:"Hóesés",lake:"Tükröződés a tavon",moon:"Hold",labels:"Feliratok",
+  snowfall:"Hóesés",snowSpeed:"Hóesés sebessége",lake:"Tükröződés a tavon",moon:"Hold",labels:"Feliratok",
   secPalette:"Paletta",autoPalette:"Automatikus palettaváltás",
   boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",perfGuard:"Teljesítményőr",
   perfNote:"Ritkítja a sugarakat, a havat és a részecskéket, ha esik a képkockaszám.",
@@ -537,7 +542,7 @@ const I18N={
   kp:"Activitate solară (Kp)",launchCME:"⚡ Lansează CME",autoStorm:"Furtună automată",
   speed:"Viteza timpului",pitch:"Unghiul camerei",zoom:"Zoom",camDrift:"Derivă de cameră",
   secLayers:"Straturi",fieldLines:"Linii de câmp",particleFlow:"Flux de particule",
-  snowfall:"Ninsoare",lake:"Reflexie pe lac",moon:"Luna",labels:"Etichete",
+  snowfall:"Ninsoare",snowSpeed:"Viteza ninsorii",lake:"Reflexie pe lac",moon:"Luna",labels:"Etichete",
   secPalette:"Paletă",autoPalette:"Schimbare automată",
   boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",perfGuard:"Gardă de performanță",
   perfNote:"Reduce razele, fulgii și particulele dacă scade rata de cadre.",
@@ -575,7 +580,7 @@ const I18N={
   kp:"Sonnenaktivität (Kp)",launchCME:"⚡ CME starten",autoStorm:"Auto-Sturm",
   speed:"Zeittempo",pitch:"Kameraneigung",zoom:"Zoom",camDrift:"Kameradrift",
   secLayers:"Ebenen",fieldLines:"Feldlinien",particleFlow:"Teilchenstrom",
-  snowfall:"Schneefall",lake:"Spiegelung im See",moon:"Mond",labels:"Beschriftungen",
+  snowfall:"Schneefall",snowSpeed:"Schneefall-Tempo",lake:"Spiegelung im See",moon:"Mond",labels:"Beschriftungen",
   secPalette:"Palette",autoPalette:"Palette automatisch wechseln",
   boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",perfGuard:"Leistungswächter",
   perfNote:"Reduziert Strahlen, Schnee und Teilchen, wenn die Bildrate fällt.",
@@ -1630,6 +1635,13 @@ function drawCurtains(g,sc,pitchPx){
   /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
   const softCol=Math.min(softHi,.84);
   /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
+  /* storm rays broaden into wide soft columns: x2.5 at Kp7, x3.5 at Kp9 */
+  const wMul=kpn<=.333?lerp(1,1.5,clamp(kpn/.333,0,1))
+           :kpn<=.55?lerp(1.5,2.0,(kpn-.333)/.217)
+           :kpn<=.78?lerp(2.0,2.5,(kpn-.55)/.23)
+           :lerp(2.5,3.5,clamp((kpn-.78)/.22,0,1));
+  /* wider rays carry the same light spread out — keep the sky from clipping */
+  const wNorm=1/Math.pow(wMul,.9);
   const hb=kpn<=.333?lerp(1.0,1.50,clamp(kpn/.333,0,1))
          :kpn<=.55?lerp(1.50,1.30,(kpn-.333)/.217)
          :kpn<=.78?lerp(1.30,1.50,(kpn-.55)/.23)
@@ -1649,13 +1661,13 @@ function drawCurtains(g,sc,pitchPx){
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
     /* thin, near-vertical rays: narrow base width, varied per ray */
-    const rwBase=isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
+    const rwBase=(isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
                 :c.soft?Math.max(2.0,dx*1.9)
-                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi));
+                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi)))*wMul;
     const drift=t*c.driftSpd*40*(1+kpn*.9);
     const hBase=(isRibbon
       ? gh*(.05+.07*p)
-      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn))*hb;
+      : gh*(.10+.50*p*(.35+.65*near)+.05*near)*(.75+.55*kpn))*hb;
     const bucketBase=clamp(p*1.15+depth*.05,0,1);
     /* not every layer carries red — oxygen 630nm is patchy in reality */
     const bucketMax=Math.round((RAY_BUCKETS-1)*(.55+.45*c.redSeed));
@@ -1674,11 +1686,14 @@ function drawCurtains(g,sc,pitchPx){
       /* the living base arc: one slow big wave + a medium wave + noise */
       const arc=Math.sin(u*TAU*1.15+tt*.055+c.phase)*gh*.018
                +Math.sin(u*TAU*2.7-tt*.025)*gh*.010;
-      const baseY=(horizonY*sc) - gh*(.02+c.yOff*.10+p*.10*near)
+      const baseY=(horizonY*sc) - gh*(.02+c.yOff*.015+p*.025*near)
                  + pitchPx*sc*(.6+near*.8) + arc;
       const fx=u*6.2*c.foldA+drift*.08+c.phase;
       const fold=c.n1(fx)*.55 + c.n2(fx*2.35+11)*.28 + c.n3(fx*5.1+31)*.13;
-      const y=baseY + fold*gh*(.055+.055*near+p*.045);
+      /* extra per-ray jitter dissolves the flat 'starting plate' the
+         base otherwise forms at high activity */
+      const baseJit=c.n3(u*13.7+c.phase*1.9+tt*.06)*gh*(.024+.046*kpn);
+      const y=baseY + fold*gh*(.055+.055*near+p*.045)+baseJit;
       const hN=.55+.45*c.n2(u*3.1+tt*.05+c.phase);
       const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
       /* strong per-ray intensity variation: some rays barely there */
@@ -1726,29 +1741,14 @@ function drawCurtains(g,sc,pitchPx){
       }else{
         hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
       }
-      g.globalAlpha=clamp(inten*.68,0,.94);
+      g.globalAlpha=clamp(inten*.68*wNorm,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
       if((iN>.72||isRibbon) && inten>.14 && !c.soft && softHi<.65){
         const coreW=Math.max(.8,rw*.22);
-        g.globalAlpha=clamp(inten*.27,0,.42);
+        g.globalAlpha=clamp(inten*.27*wNorm,0,.42);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
       }
-    }
-  }
-  /* veil / patch: big soft dim pools of light behind everything */
-  if(p>.30){
-    const nV=isMobile?4:7;
-    const vA=clamp((p-.30)*.2,0,.12);
-    for(let k=0;k<nV;k++){
-      const vx=gw*(.12+.76*(curtains[0].n1(k*3.17+sim.t*.008)*.5+.5));
-      const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
-      const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
-      g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
-      const vcs=[[255,92,180],[56,214,255],[178,126,255],[255,92,180],[255,200,90],[0,0,0],[230,60,120]];
-      const vv=vcs[k%7];
-      const vc=vv[0]===0?P.green:mixRGB(P.green,vv,.45);
-      g.drawImage(tintSprite(SPR.soft,vc),vx-vs,vy-vs*.6,vs*2,vs*1.2);
     }
   }
   g.globalAlpha=1;
@@ -1785,10 +1785,10 @@ function updateSnow(dt){
   if(!snow) return;
   for(let i=0;i<snowN;i++){
     const o=i*SNOW_STRIDE, L=snow[o+4];
-    const sp=(.55+L*1.05);
+    const sp=(.55+L*1.05)*S.snowSpd;
     snow[o]+=(snow[o+2]*sp+Math.sin(sim.t*.7+snow[o+5])*.005*(1+L*.5))*dt;
     snow[o+1]+=snow[o+3]*sp*dt;
-    if(snow[o+1]>1.05){ snow[o+1]=-.05; snow[o]=Math.random(); }
+    if(snow[o+1]>1.02){ snow[o+1]=-.05; snow[o]=Math.random(); }
     if(snow[o]>1.05) snow[o]=-.05; else if(snow[o]<-.05) snow[o]=1.05;
   }
 }
@@ -1799,7 +1799,10 @@ function drawSnow(){
   for(let i=0;i<snowN;i++){
     const o=i*SNOW_STRIDE, L=snow[o+4];
     const x=snow[o]*W, y=snow[o+1]*H;
-    const depthFade=smoothstep((snow[o+1]-.06)/.5);
+    /* melt away near the ground — no lingering dots on the landscape */
+    const melt=1-smoothstep((snow[o+1]-.74)/.24);
+    const depthFade=smoothstep((snow[o+1]-.06)/.5)*melt;
+    if(depthFade<=.01) continue;
     if(L===0){                    /* far: tiny, slow, dim */
       ctx.globalAlpha=(.05+.07*Math.abs(Math.sin(i)))*depthFade;
       ctx.fillRect(x,y,1.1,1.1);
@@ -1809,7 +1812,7 @@ function drawSnow(){
     }else{                        /* foreground: bigger, faster, slightly
                                      elongated like a long-exposure frame */
       ctx.globalAlpha=(.30+.15*Math.abs(Math.sin(i*2.3)))*depthFade;
-      const st=1.8+Math.abs(snow[o+3])*38;
+      const st=1.4+Math.abs(snow[o+3])*30*Math.min(S.snowSpd,1.6);
       ctx.beginPath(); ctx.ellipse(x,y,1.7,st,0,0,TAU); ctx.fill();
     }
   }
@@ -2238,7 +2241,7 @@ function pushURL(){
   const q=new URLSearchParams();
   q.set("seed",S.seed); q.set("view",S.view); q.set("kp",S.kp);
   q.set("speed",S.speed); q.set("pitch",Math.round(S.pitch)); q.set("zoom",S.zoom.toFixed(2));
-  q.set("pal",S.pal); q.set("boost",S.boost); q.set("bloom",Math.round(S.bloom)); q.set("stars",S.stars);
+  q.set("snowspd",S.snowSpd.toFixed(2)); q.set("pal",S.pal); q.set("boost",S.boost); q.set("bloom",Math.round(S.bloom)); q.set("stars",S.stars);
   q.set("lang",S.lang);
   const b={drift:S.drift,auto:S.auto,field:S.field,flow:S.flow,snow:S.snow,lake:S.lake,moon:S.moon,
            labels:S.labels,autopal:S.autoPal,perf:S.perf};
@@ -2291,6 +2294,7 @@ function refreshReadouts(){
   $("kpDesc").textContent=T("kpDesc")[S.kp];
   $("speedVal").textContent=fmt(S.speed,1)+"×";
   $("pitchVal").textContent=fmt(Math.round(S.pitch*.8))+"\u00b0";
+  $("snowSpdVal").textContent=fmt(S.snowSpd,1)+"\u00d7";
   $("zoomVal").textContent=fmt(S.zoom,2)+"×";
   $("boostVal").textContent=fmt(S.boost)+"%";
   $("bloomVal").textContent=fmt(Math.round(S.bloom))+"%";
@@ -2364,7 +2368,7 @@ function projectorStep(dt){
   }
   if(S.view==="space"){
     S.zoom=clamp(lerp(S.zoom, sim.cme? 1.25:1.0, dt*.6),.6,2.5);
-    $("zoom").value=S.zoom;
+    $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd;
     if(sim.phase===PHASE.STORM && sim.phaseT>3.2) setView("sky",true);
     if(sim.phase===PHASE.QUIET && sim.nextAuto>8) setView("sky",true);
   }
@@ -2454,7 +2458,7 @@ function bindSwitch(id,key,fn){
 function initUI(){
   /* restore control values from state */
   $("kp").value=S.kp; $("speed").value=S.speed; $("pitch").value=S.pitch;
-  $("zoom").value=S.zoom; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
+  $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
   $("autoStorm").checked=S.auto; $("perfGuard").checked=S.perf;
   $("autoPal").checked=S.autoPal;
 
@@ -2470,6 +2474,7 @@ function initUI(){
   bindSwitch("tField","field");
   bindSwitch("tFlow","flow");
   bindSwitch("tSnow","snow");
+  bindRange("snowSpd","snowSpd");
   bindSwitch("tLake","lake");
   bindSwitch("tMoon","moon");
   bindSwitch("tLabels","labels");
@@ -2561,7 +2566,7 @@ cv.addEventListener("wheel",e=>{
   if(S.view!=="space") return;
   e.preventDefault();
   S.zoom=clamp(S.zoom*(e.deltaY>0?.94:1.064),.6,2.5);
-  $("zoom").value=S.zoom; refreshReadouts(); pushURL();
+  $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; refreshReadouts(); pushURL();
 },{passive:false});
 cv.addEventListener("click",()=>{ if(proj.on) toggleProjector(false); });
 /* pinch zoom in space view */
@@ -2569,7 +2574,7 @@ let pinch=0;
 cv.addEventListener("touchmove",e=>{
   if(e.touches.length!==2||S.view!=="space") return;
   const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-  if(pinch){ S.zoom=clamp(S.zoom*(d/pinch),.6,2.5); $("zoom").value=S.zoom; refreshReadouts(); }
+  if(pinch){ S.zoom=clamp(S.zoom*(d/pinch),.6,2.5); $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; refreshReadouts(); }
   pinch=d;
 },{passive:true});
 cv.addEventListener("touchend",()=>{pinch=0;});
