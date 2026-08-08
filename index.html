@@ -1630,7 +1630,8 @@ function drawCurtains(g,sc,pitchPx){
   /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
   const softCol=Math.min(softHi,.84);
   /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
-  const hb=kpn<=.55?lerp(1.0,1.30,clamp((kpn-.30)/.25,0,1))
+  const hb=kpn<=.333?lerp(1.0,1.50,clamp(kpn/.333,0,1))
+         :kpn<=.55?lerp(1.50,1.30,(kpn-.333)/.217)
          :kpn<=.78?lerp(1.30,1.50,(kpn-.55)/.23)
          :lerp(1.50,1.25,clamp((kpn-.78)/.22,0,1));
   g.globalCompositeOperation="lighter";
@@ -1711,8 +1712,8 @@ function drawCurtains(g,sc,pitchPx){
          mixed zones; the blend width grows with Kp:
          ~30% at Kp3, 35% at Kp7, 60% at Kp9 */
       const blend=kpn<=.333?.30
-                 :kpn<=.778?lerp(.30,.35,(kpn-.333)/.445)
-                 :lerp(.35,.60,clamp((kpn-.778)/.222,0,1));
+                 :kpn<=.778?lerp(.30,.44,(kpn-.333)/.445)
+                 :lerp(.44,.90,clamp((kpn-.778)/.222,0,1));
       const dith=c.n3(u*37.0+c.phase*3.1)*blend*.5;
       const hueN=curtains[0].n1(gx*3.2+t*.012)+curtains[0].n3(gx*1.3-t*.008)*.5+dith;
       /* two noise axes: a warm band system led by pink, over a cool
