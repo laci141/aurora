@@ -323,6 +323,10 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
     </div>
     <label class="sw-row"><span class="t" data-i18n="autoStars"></span>
       <span class="sw"><input type="checkbox" id="autoStars"><i></i></span></label>
+    <div class="row">
+      <div class="lbl"><span data-i18n="starSpeed"></span><span class="v" id="starSpdVal">50%</span></div>
+      <input type="range" id="starSpd" min="10" max="100" step="1" value="50">
+    </div>
     <label class="sw-row"><span class="t" data-i18n="perfGuard"></span>
       <span class="sw"><input type="checkbox" id="perfGuard" checked><i></i></span></label>
     <div class="note" data-i18n="perfNote"></div>
@@ -436,6 +440,7 @@ const S={
   pal:   Math.round(qNum("pal",0,0,3)),
   autoPal:qBool("autopal",false),
   autoStars:qBool("autostars",false),
+  starSpd:qNum("starspd",50,10,100),
   boost: qNum("boost",15,0,25),
   bloom: qNum("bloom",45,0,100),
   stars: qNum("stars",60,10,250),
@@ -471,7 +476,7 @@ const I18N={
   secLayers:"Layers",fieldLines:"Field lines",particleFlow:"Particle flow",
   snowfall:"Snowfall",snowSpeed:"Snowfall speed",lake:"Lake reflection",moon:"Moon",labels:"Labels",
   secPalette:"Palette",autoPalette:"Auto-switch palette",
-  boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",autoStars:"Auto star density",perfGuard:"Performance guard",
+  boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",autoStars:"Auto star density",starSpeed:"Star change speed",perfGuard:"Performance guard",
   perfNote:"Thins rays, snow and particles if the frame rate drops.",
   secActions:"Actions",photo:"📷 Photo",copyLink:"🔗 Copy link",projector:"▶ Projector",hideUI:"👁 Hide UI",
   seedNote:"The link carries the seed and every setting — the same sky comes back exactly.",
@@ -509,7 +514,7 @@ const I18N={
   secLayers:"Rétegek",fieldLines:"Erővonalak",particleFlow:"Részecskeáram",
   snowfall:"Hóesés",snowSpeed:"Hóesés sebessége",lake:"Tükröződés a tavon",moon:"Hold",labels:"Feliratok",
   secPalette:"Paletta",autoPalette:"Automatikus palettaváltás",
-  boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",autoStars:"Auto csillagsűrűség",perfGuard:"Teljesítményőr",
+  boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",autoStars:"Auto csillagsűrűség",starSpeed:"Csillagváltozás sebessége",perfGuard:"Teljesítményőr",
   perfNote:"Ritkítja a sugarakat, a havat és a részecskéket, ha esik a képkockaszám.",
   secActions:"Műveletek",photo:"📷 Fotó",copyLink:"🔗 Link másolása",projector:"▶ Vetítő",hideUI:"👁 Felület elrejtése",
   seedNote:"A link viszi a magot és minden beállítást — ugyanaz az égbolt tér vissza.",
@@ -547,7 +552,7 @@ const I18N={
   secLayers:"Straturi",fieldLines:"Linii de câmp",particleFlow:"Flux de particule",
   snowfall:"Ninsoare",snowSpeed:"Viteza ninsorii",lake:"Reflexie pe lac",moon:"Luna",labels:"Etichete",
   secPalette:"Paletă",autoPalette:"Schimbare automată",
-  boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",autoStars:"Densitate auto a stelelor",perfGuard:"Gardă de performanță",
+  boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",autoStars:"Densitate auto a stelelor",starSpeed:"Viteza schimbării stelelor",perfGuard:"Gardă de performanță",
   perfNote:"Reduce razele, fulgii și particulele dacă scade rata de cadre.",
   secActions:"Acțiuni",photo:"📷 Fotografie",copyLink:"🔗 Copiază linkul",projector:"▶ Proiector",hideUI:"👁 Ascunde interfața",
   seedNote:"Linkul poartă sămânța și toate setările — același cer revine exact.",
@@ -585,7 +590,7 @@ const I18N={
   secLayers:"Ebenen",fieldLines:"Feldlinien",particleFlow:"Teilchenstrom",
   snowfall:"Schneefall",snowSpeed:"Schneefall-Tempo",lake:"Spiegelung im See",moon:"Mond",labels:"Beschriftungen",
   secPalette:"Palette",autoPalette:"Palette automatisch wechseln",
-  boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",autoStars:"Auto-Sterndichte",perfGuard:"Leistungswächter",
+  boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",autoStars:"Auto-Sterndichte",starSpeed:"Sternwechsel-Tempo",perfGuard:"Leistungswächter",
   perfNote:"Reduziert Strahlen, Schnee und Teilchen, wenn die Bildrate fällt.",
   secActions:"Aktionen",photo:"📷 Foto",copyLink:"🔗 Link kopieren",projector:"▶ Projektor",hideUI:"👁 UI ausblenden",
   seedNote:"Der Link trägt den Seed und alle Einstellungen — derselbe Himmel kehrt exakt zurück.",
@@ -2293,7 +2298,7 @@ function pushURL(){
   const b={drift:S.drift,auto:S.auto,field:S.field,flow:S.flow,snow:S.snow,lake:S.lake,moon:S.moon,
            labels:S.labels,autopal:S.autoPal,perf:S.perf};
   for(const k in b) q.set(k,b[k]?"1":"0");
-  q.set("autostars",S.autoStars?"1":"0");
+  q.set("autostars",S.autoStars?"1":"0"); q.set("starspd",Math.round(S.starSpd));
   history.replaceState(null,"","?"+q.toString());
 }
 
@@ -2343,6 +2348,7 @@ function refreshReadouts(){
   $("speedVal").textContent=fmt(S.speed,1)+"×";
   $("pitchVal").textContent=fmt(Math.round(S.pitch*.8))+"\u00b0";
   $("snowSpdVal").textContent=fmt(S.snowSpd,1)+"\u00d7";
+  $("starSpdVal").textContent=fmt(Math.round(S.starSpd))+"%";
   $("zoomVal").textContent=fmt(S.zoom,2)+"×";
   $("boostVal").textContent=fmt(S.boost)+"%";
   $("bloomVal").textContent=fmt(Math.round(S.bloom))+"%";
@@ -2444,9 +2450,12 @@ function frame(now){
   }
   /* auto star density: wanders randomly and smoothly between 10 and 250% */
   if(S.autoStars && !REDUCED){
-    starAutoT-=dt;
+    /* paced only by the star-speed slider (10-100% -> 0.1x-1.0x),
+       independent of the storm tab's time speed */
+    const starPace=S.starSpd/100;
+    starAutoT-=dt*starPace;
     if(starAutoT<=0){ starTarget=10+Math.random()*240; starAutoT=9+Math.random()*13; }
-    S.stars=lerp(S.stars,starTarget,1-Math.pow(.75,dt));
+    S.stars=lerp(S.stars,starTarget,1-Math.pow(.75,dt*starPace));
     if(Math.abs(S.stars-starApplied)>3){
       starApplied=S.stars;
       $("stars").value=S.stars;
@@ -2520,7 +2529,7 @@ function initUI(){
   $("kp").value=S.kp; $("speed").value=S.speed; $("pitch").value=S.pitch;
   $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
   $("autoStorm").checked=S.auto; $("perfGuard").checked=S.perf;
-  $("autoPal").checked=S.autoPal; $("autoStars").checked=S.autoStars;
+  $("autoPal").checked=S.autoPal; $("autoStars").checked=S.autoStars; $("starSpd").value=S.starSpd;
 
   bindRange("kp","kp",()=>{ $("kpDesc").textContent=T("kpDesc")[S.kp]; });
   bindRange("speed","speed");
@@ -2540,6 +2549,7 @@ function initUI(){
   bindSwitch("tLabels","labels");
   bindSwitch("autoPal","autoPal");
   bindSwitch("autoStars","autoStars");
+  bindRange("starSpd","starSpd");
   bindSwitch("perfGuard","perf");
 
   $("btnSky").onclick=()=>setView("sky");
