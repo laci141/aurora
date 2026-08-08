@@ -176,8 +176,8 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 #caption .k{color:var(--accent);font-weight:650}
 
 #toast{
-  position:fixed;left:50%;top:22px;transform:translate(-50%,-14px);z-index:60;
-  padding:9px 16px;border-radius:99px;font-size:12px;font-weight:550;
+  position:fixed;left:50%;top:14px;transform:translate(-50%,-14px);z-index:60;
+  padding:7px 14px;border-radius:99px;font-size:11px;font-weight:550;opacity:0;
   background:rgba(10,16,28,.6);border:1px solid rgba(255,255,255,.12);color:var(--ink);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   opacity:0;pointer-events:none;transition:opacity .35s ease,transform .35s cubic-bezier(.22,.9,.3,1)}
@@ -226,23 +226,23 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
 
 <button id="restore" class="hidden" aria-label="Show controls">☰</button>
 
-<aside id="panel" class="glass-panel">
+<aside id="panel" class="glass-panel" aria-label="Aurora control panel">
   <div class="p-head">
     <div class="p-title"><b>AURORA</b> <span data-i18n="subtitle"></span></div>
     <button class="icon-btn" id="btnMin" aria-label="Minimise">—</button>
   </div>
 
-  <div class="lang">
+  <div class="lang" role="group" aria-label="Language">
     <button data-lang="en" class="on">EN</button>
     <button data-lang="hu">HU</button>
     <button data-lang="ro">RO</button>
     <button data-lang="de">DE</button>
   </div>
 
-  <div class="tabs">
-    <button data-tab="0" class="on" data-i18n="tabStorm"></button>
-    <button data-tab="1" data-i18n="tabVisuals"></button>
-    <button data-tab="2" data-i18n="tabSound"></button>
+  <div class="tabs" role="tablist" aria-label="Aurora controls">
+    <button role="tab" aria-selected="true" data-tab="0" class="on" data-i18n="tabStorm"></button>
+    <button role="tab" aria-selected="false" data-tab="1" data-i18n="tabVisuals"></button>
+    <button role="tab" aria-selected="false" data-tab="2" data-i18n="tabSound"></button>
   </div>
 
   <!-- ============ TAB 1: STORM ============ -->
@@ -272,7 +272,7 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
     </div>
 
     <div class="row sky-only" id="rowPitch">
-      <div class="lbl"><span data-i18n="pitch"></span><span class="v" id="pitchVal">50%</span></div>
+      <div class="lbl"><span data-i18n="pitch"></span><span class="v" id="pitchVal">40\u00b0</span></div>
       <input type="range" id="pitch" min="0" max="100" step="1" value="50">
     </div>
 
@@ -468,7 +468,7 @@ const I18N={
   secActions:"Actions",photo:"📷 Photo",copyLink:"🔗 Copy link",projector:"▶ Projector",hideUI:"👁 Hide UI",
   seedNote:"The link carries the seed and every setting — the same sky comes back exactly.",
   soundOn:"Sound on",soundNote:"Procedural audio — nothing is loaded, every sound is generated live.",
-  volMaster:"Master",secLayersSnd:"Layers",
+  volMaster:"Master",secLayersSnd:"Sound layers",
   sndWind:"Solar wind",sndDrone:"Deep field",sndShimmer:"Aurora shimmer",
   sndImpact:"Impact",sndChimes:"Chimes",sndFollow:"Follow the simulation",
   credit:"Made by laci141 — source & download on GitHub ↗",
@@ -506,7 +506,7 @@ const I18N={
   secActions:"Műveletek",photo:"📷 Fotó",copyLink:"🔗 Link másolása",projector:"▶ Vetítő",hideUI:"👁 Felület elrejtése",
   seedNote:"A link viszi a magot és minden beállítást — ugyanaz az égbolt tér vissza.",
   soundOn:"Hang bekapcsolva",soundNote:"Generált hang — semmi nem töltődik le, minden élőben készül.",
-  volMaster:"Fő hangerő",secLayersSnd:"Rétegek",
+  volMaster:"Fő hangerő",secLayersSnd:"Hangsávok",
   sndWind:"Napszél",sndDrone:"Mély tér",sndShimmer:"Sarkifény-csillogás",
   sndImpact:"Becsapódás",sndChimes:"Csengők",sndFollow:"Kövesse a szimulációt",
   credit:"Készítette laci141 — forrás és letöltés a GitHubon ↗",
@@ -522,7 +522,7 @@ const I18N={
           "Súlyos vihar. Korona a fejünk felett, mindenütt szín.",
           "Extrém. Ég az egész égbolt — évtizedenkénti éjszaka."],
   capImpact:"A Nap most dobott felénk egymilliárd tonna plazmát. A Föld mágneses mezeje szinte mindet elkapta — <span class='k'>amit látsz, az a kevés, ami a pólusoknál beszivárgott.</span>",
-  lblCME:"CME",lblShock:"Fejhullám",lblTail:"Magnetoszféra-csóva",lblCusp:"Sarki tölcsér",lblOval:"Sarkifény-ovál",
+  lblCME:"CME",lblShock:"Fejhullám",lblTail:"Magnetoszféra-csóva",lblCusp:"Sarki tölcsér",lblOval:"Sarkifény-ovális",
   lblSun:"Nap",lblEarth:"Föld",lblWind:"Napszél",
   tLinked:"Link a vágólapon",tPhoto:"Fotó mentve",tProjOn:"Vetítő mód — Esc a kilépéshez",tProjOff:"Vetítő mód ki",
   tCME:"CME úton — becsapódás pár másodperc múlva",tImpact:"Becsapódás! Összenyomódik a magnetoszféra",
@@ -544,7 +544,7 @@ const I18N={
   secActions:"Acțiuni",photo:"📷 Fotografie",copyLink:"🔗 Copiază linkul",projector:"▶ Proiector",hideUI:"👁 Ascunde interfața",
   seedNote:"Linkul poartă sămânța și toate setările — același cer revine exact.",
   soundOn:"Sunet pornit",soundNote:"Audio procedural — nimic nu se descarcă, totul e generat live.",
-  volMaster:"Volum general",secLayersSnd:"Straturi",
+  volMaster:"Volum general",secLayersSnd:"Piste audio",
   sndWind:"Vânt solar",sndDrone:"Câmp adânc",sndShimmer:"Licărirea aurorei",
   sndImpact:"Impact",sndChimes:"Clopoței",sndFollow:"Urmează simularea",
   credit:"Creat de laci141 — sursă și descărcare pe GitHub ↗",
@@ -582,7 +582,7 @@ const I18N={
   secActions:"Aktionen",photo:"📷 Foto",copyLink:"🔗 Link kopieren",projector:"▶ Projektor",hideUI:"👁 UI ausblenden",
   seedNote:"Der Link trägt den Seed und alle Einstellungen — derselbe Himmel kehrt exakt zurück.",
   soundOn:"Klang an",soundNote:"Prozedurales Audio — nichts wird geladen, alles entsteht live.",
-  volMaster:"Gesamt",secLayersSnd:"Ebenen",
+  volMaster:"Gesamt",secLayersSnd:"Tonspuren",
   sndWind:"Sonnenwind",sndDrone:"Tiefes Feld",sndShimmer:"Polarlicht-Schimmer",
   sndImpact:"Einschlag",sndChimes:"Glöckchen",sndFollow:"Der Simulation folgen",
   credit:"Erstellt von laci141 — Quellcode & Download auf GitHub ↗",
@@ -667,7 +667,7 @@ updatePalette();
    --------------------------------------------------------------- */
 const cv=document.getElementById("scene");
 const ctx=cv.getContext("2d",{alpha:false});
-let W=0,H=0,DPR=1,isPortrait=false,isMobile=false;
+let W=0,H=0,DPR=1,DPR_CAP=2,isPortrait=false,isMobile=false;
 let dprWatch=null;
 
 function watchDPR(){
@@ -678,9 +678,10 @@ function watchDPR(){
 function onDprChange(){ watchDPR(); resize(); }
 
 function resize(){
-  DPR=Math.min(window.devicePixelRatio||1,2);
+  DPR=Math.min(window.devicePixelRatio||1,DPR_CAP);
   W=window.innerWidth; H=window.innerHeight;
   isPortrait=H>W; isMobile=Math.min(W,H)<700;
+  if(isMobile) perf.coronaScale=0;
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
   cv.style.width=W+"px"; cv.style.height=H+"px";
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -816,8 +817,8 @@ function buildRaySprites(force){
       const c=mkCanvas(RAY_W,RAY_H), g=c.getContext("2d");
       const grad=g.createLinearGradient(0,RAY_H,0,0); /* bottom -> top */
       const redMix=clamp(f*1.15,0,1)*P.redAmt;
-      const purp=clamp((f-.38)/.62,0,1)*P.purpAmt;
-      const pink=mixRGB(U,[255,120,190],.55);
+      const purp=clamp((f-.38)/.62,0,1)*P.purpAmt*.55;
+      const pink=mixRGB(U,[175,120,205],.55);
       const core=mixRGB(G,WHT,.34+f*.14);
       const bot=mixRGB(G,pink,purp*.85);
       grad.addColorStop(0,   rgb(bot,0));
@@ -825,9 +826,10 @@ function buildRaySprites(force){
       grad.addColorStop(.075,rgb(mixRGB(core,pink,purp*.30),clamp(.88*boost,0,1)));
       grad.addColorStop(.13, rgb(core,clamp(.86*boost,0,1)));
       grad.addColorStop(.25, rgb(mixRGB(G,WHT,.08),clamp(.72*boost,0,1)));
-      grad.addColorStop(.45, rgb(mixRGB(G,R,redMix*.30),clamp(.42*boost,0,1)));
-      grad.addColorStop(.67, rgb(mixRGB(mixRGB(G,R,redMix*.62),WHT,.06),clamp(.20*boost,0,1)));
-      grad.addColorStop(.86, rgb(mixRGB(G,R,redMix*.9),clamp(.07*boost,0,1)));
+      grad.addColorStop(.45, rgb(mixRGB(G,R,redMix*.26),clamp(.40*boost,0,1)));
+      grad.addColorStop(.62, rgb(mixRGB(G,R,redMix*.50),clamp(.22*boost,0,1)));
+      grad.addColorStop(.78, rgb(mixRGB(G,R,redMix*.78),clamp(.11*boost,0,1)));
+      grad.addColorStop(.92, rgb(mixRGB(G,R,redMix*.95),clamp(.045*boost,0,1)));
       grad.addColorStop(1,   rgb(mixRGB(G,R,redMix),0));
       g.fillStyle=grad; g.fillRect(0,0,RAY_W,RAY_H);
       /* feather the sides strongly so neighbours fuse into soft folds */
@@ -880,12 +882,14 @@ function stepSim(dt){
   sim.t+=dt;
   sim.phaseT+=dt;
   const base=S.kp/9;
+  /* baseline precipitation from Kp alone — Kp 9 must burn even between storms */
+  const bp=.05+Math.pow(base,1.2)*.72;
 
   switch(sim.phase){
     case PHASE.QUIET:
       sim.compress=lerp(sim.compress,0,1-Math.pow(.001,dt));
       sim.tailStretch=lerp(sim.tailStretch,0,1-Math.pow(.001,dt));
-      sim.precipTarget=.085+base*.34;
+      sim.precipTarget=bp;
       sim.windFlux=.28+base*.3;
       if(S.auto && !REDUCED){
         sim.nextAuto-=dt;
@@ -894,7 +898,7 @@ function stepSim(dt){
       break;
 
     case PHASE.ERUPTION:
-      sim.precipTarget=.085+base*.34;
+      sim.precipTarget=bp;
       sim.windFlux=lerp(sim.windFlux,.4+sim.cme.strength*.3,dt*1.6);
       if(sim.phaseT>1.6){ sim.phase=PHASE.TRANSIT; sim.phaseT=0; }
       break;
@@ -911,7 +915,7 @@ function stepSim(dt){
       sim.compress=lerp(sim.compress,sim.cme.strength,1-Math.pow(.0005,dt));
       sim.tailStretch=lerp(sim.tailStretch,sim.cme.strength,1-Math.pow(.005,dt));
       sim.windFlux=.6+sim.cme.strength*.4;
-      sim.precipTarget=lerp(.2,.55,k)*sim.cme.strength+base*.25;
+      sim.precipTarget=lerp(.25,.6,k)*sim.cme.strength+bp*.8;
       if(sim.phaseT>1.6){ sim.phase=PHASE.STORM; sim.phaseT=0;
         sim.stormLen=lerp(30,90,sim.cme.strength); }
       break;}
@@ -920,7 +924,7 @@ function stepSim(dt){
       const k=clamp(sim.phaseT/sim.stormLen,0,1);
       const decay=Math.pow(1-k,1.7);
       const st=sim.cme?sim.cme.strength:.6;
-      sim.precipTarget=clamp(base*.3+ (.35+st*.62)*decay ,0,1.15);
+      sim.precipTarget=clamp(bp*.85+ (.3+st*.55)*decay ,0,1.15);
       sim.windFlux=.35+base*.25+(.35+st*.4)*decay;
       sim.compress=lerp(sim.compress,st*decay,1-Math.pow(.15,dt));
       sim.tailStretch=lerp(sim.tailStretch,st*decay,1-Math.pow(.2,dt));
@@ -1426,7 +1430,7 @@ function buildStarLayer(){
   g.clearRect(0,0,w,h);
   const rnd=mulberry32(SEED^0x57a2);
   /* Milky Way: a soft diagonal band of many faint dots */
-  const bandA=-0.42, bx=w*.62, by=h*.30;
+  const bandA=-0.42+(mulberry32(SEED^0x991)()-.5)*.18, bx=w*.62, by=h*.30;
   const mwN=Math.round(1400*(S.stars/100));
   for(let i=0;i<mwN;i++){
     const u=(rnd()*2-1), v=(rnd()+rnd()+rnd()-1.5)/1.5;
@@ -1534,7 +1538,7 @@ function buildLandscape(){
   /* one small cabin with a warm lit window */
   {
     const crest=landCv._crest;
-    const cx=W*(.20+mulberry32(SEED^0x9)()*.55);
+    const cx=W*(.16+mulberry32(SEED^0x9)()*.12);   /* left third: eye path cabin->lake->aurora */
     const ci=clamp(Math.round(cx/4),0,crest.length-1);
     const gy=crest[ci]+h*.055;
     const cw=Math.max(26,h*.13), ch=cw*.62;
@@ -1557,28 +1561,47 @@ function buildLandscape(){
 let curtains=[];
 function buildCurtains(){
   curtains=[];
-  const n=5;
   const rnd=mulberry32(SEED^0xa0a0);
-  for(let i=0;i<n;i++){
-    const depth=i/(n-1);            /* 0 = nearest/brightest, 1 = far */
+  /* 7 logical layers: 2 faint background curtains, 2 medium, 2 strong,
+     and 1 thin bright ribbon — tuned to read as ONE aurora system */
+  const TYPES=[
+    {kind:"curtain",depth:.98,thresh:.02},
+    {kind:"curtain",depth:.84,thresh:.06},
+    {kind:"curtain",depth:.62,thresh:.13},
+    {kind:"curtain",depth:.46,thresh:.22},
+    {kind:"curtain",depth:.24,thresh:.34},
+    {kind:"curtain",depth:.06,thresh:.48},
+    {kind:"ribbon", depth:.34,thresh:.30}
+  ];
+  for(let i=0;i<TYPES.length;i++){
+    const T=TYPES[i];
     curtains.push({
-      depth,
-      rays:Math.round((isMobile?58:92)*perf.rayScale),
+      kind:T.kind,
+      depth:clamp(T.depth+(rnd()-.5)*.06,0,1),
+      thresh:T.thresh,
+      rays:rayCountFor(T.kind),
       phase:rnd()*100,
-      driftSpd:(.020+rnd()*.030)*(1-depth*.45),
+      driftSpd:(.020+rnd()*.030)*(1-T.depth*.45)*(T.kind==="ribbon"?1.5:1),
+      /* every layer lives on its own clock: big curtains drift slowly,
+         near ones and the ribbon move faster (multi-scale dynamics) */
+      tScale:.22+(1-T.depth)*.5+(T.kind==="ribbon"?.28:0),
       foldA:.6+rnd()*.9,
-      foldB:1.5+rnd()*1.7,
       yOff:(rnd()*.6-.1),
-      widthSpan:1.1+rnd()*.55,
-      xOff:(rnd()-.5)*.4,
-      surge:-999, surgeSpd:0, surgeDir:1,
+      widthSpan:(T.kind==="ribbon"?.85+rnd()*.35:1.1+rnd()*.55),
+      xOff:(rnd()-.5)*.3+.10,           /* aurora weight sits right of centre */
+      redSeed:rnd(),                     /* how much red this layer may carry */
+      surge:-999,surgeSpd:0,surgeDir:1,
       n1:makeNoise(SEED^(0x300+i)),
       n2:makeNoise(SEED^(0x400+i)),
       n3:makeNoise(SEED^(0x500+i))
     });
   }
 }
-function retuneCurtains(){ for(const c of curtains) c.rays=Math.round((isMobile?58:92)*perf.rayScale); }
+function rayCountFor(kind){
+  const base=kind==="ribbon"?(isMobile?40:68):(isMobile?55:92);
+  return Math.round(base*perf.rayScale*(kind==="ribbon"?perf.ribbonScale:1));
+}
+function retuneCurtains(){ for(const c of curtains) c.rays=rayCountFor(c.kind); }
 
 /* offscreen curtain layer (also reused for the lake reflection) */
 let curCv=null,curCtx=null,CUR_S=0.62;
@@ -1587,73 +1610,115 @@ function sizeOffscreens(){
   curCv=mkCanvas(w,h); curCtx=curCv.getContext("2d");
 }
 
-function curtainCount(){
-  const p=sim.precip;
-  if(p<.16) return 1;
-  if(p<.30) return 2;
-  if(p<.50) return 3;
-  if(p<.75) return 4;
-  return 5;
-}
-
 function drawCurtains(g,sc,pitchPx){
   const p=clamp(sim.precip,0,1.15);
-  const active=curtainCount();
   const gw=W*sc, gh=H*sc;
+  /* Kp drives GEOMETRY, not just brightness: span, height, motion speed */
+  const kpn=clamp(Math.max(S.kp/9,sim.effKp/9),0,1);
   g.globalCompositeOperation="lighter";
-  for(let ci=0;ci<active;ci++){
+  for(let ci=0;ci<curtains.length;ci++){
     const c=curtains[ci];
-    const depth=c.depth;
-    const near=1-depth;
-    /* geometry ------------------------------------------------- */
-    const baseY=(horizonY*sc) - gh*(.02 + c.yOff*.10 + p*.10*near) + pitchPx*sc*(.6+near*.8);
-    const spanW=gw*c.widthSpan;
+    const isRibbon=c.kind==="ribbon";
+    if(isRibbon && perf.ribbonScale<=0) continue;
+    const depth=c.depth, near=1-depth;
+    /* each layer fades in past its own precipitation threshold */
+    const vis=clamp((p-c.thresh)*2.1,0,1.35)*(isRibbon?1.25:1);
+    if(vis<=.02) continue;
+    const t=sim.t, tt=t*c.tScale;
+    const spanW=gw*c.widthSpan*(.72+.38*kpn);
     const x0=gw*.5 - spanW*.5 + c.xOff*gw*.2;
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
-    const rw=Math.max(2.0,dx*1.9);
-    const t=sim.t;
-    const drift=t*c.driftSpd*40;
-    /* how tall / bright this curtain is right now */
-    const vis=clamp((p-depth*.16)*1.9,0,1.35);
-    if(vis<=.02) continue;
-    const hBase=gh*(.13+ .48*p*near + .06*near);
+    /* thin, near-vertical rays: narrow base width, varied per ray */
+    const rwBase=isRibbon?Math.max(1.0,dx*.95):Math.max(1.0,dx*(1.15+near*.45));
+    const drift=t*c.driftSpd*40*(1+kpn*.9);
+    const hBase=isRibbon
+      ? gh*(.05+.07*p)
+      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn);
     const bucketBase=clamp(p*1.15+depth*.05,0,1);
+    /* not every layer carries red — oxygen 630nm is patchy in reality */
+    const bucketMax=Math.round((RAY_BUCKETS-1)*(.55+.45*c.redSeed));
     /* surge --------------------------------------------------- */
-    if(sim.surgeQueue>0 && c.surge<-100){
+    if(sim.surgeQueue>0 && c.surge<-100 && !isRibbon){
       sim.surgeQueue--;
       c.surge=0; c.surgeSpd=.35+Math.random()*.45; c.surgeDir=Math.random()<.5?-1:1;
     }
-    
     const surgePos=c.surge>-100? (c.surgeDir>0? c.surge : 1-c.surge) : -9;
 
     for(let i=0;i<nRays;i++){
       const u=i/(nRays-1);
       const x=x0+i*dx;
-      /* the base edge: layered value noise → folding fabric */
+      /* the living base arc: one slow big wave + a medium wave + noise */
+      const arc=Math.sin(u*TAU*1.15+tt*.055+c.phase)*gh*.018
+               +Math.sin(u*TAU*2.7-tt*.025)*gh*.010;
+      const baseY=(horizonY*sc) - gh*(.02+c.yOff*.10+p*.10*near)
+                 + pitchPx*sc*(.6+near*.8) + arc;
       const fx=u*6.2*c.foldA+drift*.08+c.phase;
       const fold=c.n1(fx)*.55 + c.n2(fx*2.35+11)*.28 + c.n3(fx*5.1+31)*.13;
       const y=baseY + fold*gh*(.055+.055*near+p*.045);
-      /* per-ray height and brightness, slower noise */
-      const hN=.55+.45*c.n2(u*3.1+t*.05+c.phase);
-      const iN=.45+.55*c.n3(u*4.7-t*.07+c.phase*.6);
-      let inten=vis*iN*(.45+.55*near);
-      /* subtle flicker */
+      const hN=.55+.45*c.n2(u*3.1+tt*.05+c.phase);
+      const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
+      /* strong per-ray intensity variation: some rays barely there */
+      const rayNoise=c.n3(u*7.0+c.phase+tt*.12);
+      let inten=vis*iN*(.45+.55*near)*(.45+.55*clamp(rayNoise*.5+.5,0,1));
+      if(isRibbon) inten*=1.5;
       inten*=.86+.14*Math.sin(t*(5.5+i*.37)+i*2.1);
-      /* the surge: a bright pulse travelling along the curtain */
       if(surgePos>-1){
         const d=Math.abs(u-surgePos);
         inten*=1+2.6*Math.exp(-d*d*160);
       }
       if(inten<=.012) continue;
+      /* per-ray width: thin, medium, a few wide, some hairline */
+      const wN=.4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
+      const rw=rwBase*wN;
       const hgt=hBase*hN*(.6+.7*iN);
-      const bucket=clamp(Math.round((bucketBase*.75+ iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
-      /* hue drifts slowly along the curtain: bands of teal and spring
-         green woven through the emerald, like the real thing */
+      let bucket=clamp(Math.round((bucketBase*.75+iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
+      if(bucket>bucketMax) bucket=bucketMax;
       const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
       const hue=hueN<-.28?1:(hueN>.34?2:0);
-      g.globalAlpha=clamp(inten*.55,0,.92);
+      g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
+      /* bright ray core: only the strongest rays get a narrow hot centre */
+      if(iN>.72||isRibbon){
+        const coreW=Math.max(.8,rw*.22);
+        g.globalAlpha=clamp(inten*.38,0,.55);
+        g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.92, coreW, hgt*.92);
+      }
+    }
+  }
+  /* veil / patch: big soft dim pools of light behind everything */
+  if(p>.36){
+    const nV=isMobile?3:5;
+    const vA=clamp((p-.36)*.16,0,.09);
+    for(let k=0;k<nV;k++){
+      const vx=gw*(.12+.76*(curtains[0].n1(k*3.17+sim.t*.008)*.5+.5));
+      const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
+      const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
+      g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
+      g.drawImage(tintSprite(SPR.soft,P.green),vx-vs,vy-vs*.6,vs*2,vs*1.2);
+    }
+  }
+  /* overhead corona at Kp 8-9: rays converging on a seeded zenith point */
+  if(S.kp>=8 && perf.coronaScale>0 && !isMobile && !REDUCED){
+    const cor=clamp((S.kp-7.5)/1.5,0,1)*clamp(p*1.25,0,1)*perf.coronaScale;
+    if(cor>.03){
+      const cr1=mulberry32(SEED^0x7c0)(), cr2=mulberry32(SEED^0x7c1)();
+      const ccx=gw*(.36+cr1*.28), ccy=gh*(.13+cr2*.08)+pitchPx*sc*1.1;
+      const M=Math.round(44*perf.coronaScale);
+      for(let i=0;i<M;i++){
+        const a=(i/M)*TAU+Math.sin(sim.t*.1)*.05;
+        const nz=curtains[0].n2(i*.83+sim.t*.16);
+        const len=gh*(.13+.20*(nz*.5+.5));
+        const inner=gh*(.035+.015*(curtains[0].n3(i*.61)*.5+.5));
+        const rw2=Math.max(1.2,gw*.0035*(.5+Math.abs(nz)));
+        const bkt=clamp(Math.round((.55+.35*(nz*.5+.5))*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
+        g.save();
+        g.translate(ccx,ccy); g.rotate(a);
+        g.globalAlpha=cor*(.10+.26*clamp(nz*.5+.5,0,1));
+        /* bright end outward — near the convergence point the corona is dim */
+        g.drawImage(raySprites[0][bkt],-rw2*.5,inner,rw2,len);
+        g.restore();
+      }
     }
   }
   g.globalAlpha=1;
@@ -1669,11 +1734,11 @@ function stepSurges(dt){
   }
 }
 
-/* --- snow --------------------------------------------------------- */
+/* --- snow: three depth layers for real parallax ------------------- */
 let snow=null,snowN=0;
-const SNOW_STRIDE=5;  /* x,y,vx,vy,layer */
+const SNOW_STRIDE=6;  /* x,y,vx,vy,layer,phase */
 function buildSnow(){
-  const cap=isMobile?70:130;
+  const cap=isMobile?80:150;
   snow=new Float32Array(cap*SNOW_STRIDE);
   snowN=Math.round(cap*perf.snowScale);
   const rnd=mulberry32(SEED^0x5f0);
@@ -1681,15 +1746,17 @@ function buildSnow(){
     const o=i*SNOW_STRIDE;
     snow[o]=rnd(); snow[o+1]=rnd();
     snow[o+2]=(rnd()-.5)*.02; snow[o+3]=.012+rnd()*.05;
-    snow[o+4]=i%3;
+    /* 0 = far background, 1 = middle, 2 = foreground */
+    snow[o+4]=i%5<2?0:(i%5<4?1:2);
+    snow[o+5]=rnd()*TAU;
   }
 }
 function updateSnow(dt){
   if(!snow) return;
   for(let i=0;i<snowN;i++){
     const o=i*SNOW_STRIDE, L=snow[o+4];
-    const sp=(1+L*.9);
-    snow[o]+=(snow[o+2]*sp+Math.sin(sim.t*.6+i)*.004)*dt;
+    const sp=(.55+L*1.05);
+    snow[o]+=(snow[o+2]*sp+Math.sin(sim.t*.7+snow[o+5])*.005*(1+L*.5))*dt;
     snow[o+1]+=snow[o+3]*sp*dt;
     if(snow[o+1]>1.05){ snow[o+1]=-.05; snow[o]=Math.random(); }
     if(snow[o]>1.05) snow[o]=-.05; else if(snow[o]<-.05) snow[o]=1.05;
@@ -1698,15 +1765,23 @@ function updateSnow(dt){
 function drawSnow(){
   if(!snow) return;
   const tint=P.snow;
-  ctx.fillStyle=`rgb(${(tint[0]*.45+255*.55)|0},${(tint[1]*.45+255*.55)|0},${(tint[2]*.45+255*.55)|0})`;
+  ctx.fillStyle=`rgb(${(tint[0]*.45+255*.55)|0},${(tint[1]*.45+255*.55)|0},${(tint[2]*.45+255*.55)|0}`+")";
   for(let i=0;i<snowN;i++){
     const o=i*SNOW_STRIDE, L=snow[o+4];
     const x=snow[o]*W, y=snow[o+1]*H;
-    /* flakes fade out toward the top of the frame — they belong to the foreground */
     const depthFade=smoothstep((snow[o+1]-.06)/.5);
-    const s=(.5+L*.75);
-    ctx.globalAlpha=(.10+L*.16)*depthFade;
-    ctx.beginPath(); ctx.arc(x,y,s,0,TAU); ctx.fill();
+    if(L===0){                    /* far: tiny, slow, dim */
+      ctx.globalAlpha=(.05+.07*Math.abs(Math.sin(i)))*depthFade;
+      ctx.fillRect(x,y,1.1,1.1);
+    }else if(L===1){              /* middle */
+      ctx.globalAlpha=(.15+.10*Math.abs(Math.sin(i*1.7)))*depthFade;
+      ctx.beginPath(); ctx.arc(x,y,1.3,0,TAU); ctx.fill();
+    }else{                        /* foreground: bigger, faster, slightly
+                                     elongated like a long-exposure frame */
+      ctx.globalAlpha=(.30+.15*Math.abs(Math.sin(i*2.3)))*depthFade;
+      const st=1.8+Math.abs(snow[o+3])*38;
+      ctx.beginPath(); ctx.ellipse(x,y,1.7,st,0,0,TAU); ctx.fill();
+    }
   }
   ctx.globalAlpha=1;
 }
@@ -1748,7 +1823,7 @@ function drawMoon(alpha,pitchPx){
   const ill=(1-Math.cos(phase*TAU))/2;
   ctx.globalCompositeOperation="lighter";
   const hs=r*11;
-  ctx.globalAlpha=alpha*(.06+.17*ill);
+  ctx.globalAlpha=alpha*(.06+.17*ill+clamp(sim.precip,0,1)*.05);
   ctx.drawImage(tintSprite(SPR.soft,[190,215,255]),mx-hs/2,my-hs/2,hs,hs);
   const hs2=r*4.2;
   ctx.globalAlpha=alpha*(.10+.24*ill);
@@ -1808,7 +1883,8 @@ function drawSky(alpha,scaleExtra){
   /* stars — parallax moves them less than the curtains */
   if(starCv){
     const sy=-H*.12 + pitchPx*.35;
-    ctx.globalAlpha=alpha*.95;
+    /* a bright aurora "over-exposes" the faint stars a little */
+    ctx.globalAlpha=alpha*(.95-clamp(sim.precip,0,1)*.28);
     ctx.drawImage(starCv,0,sy,W,H*1.25);
     ctx.globalAlpha=alpha;
   }
@@ -1887,6 +1963,18 @@ function drawSky(alpha,scaleExtra){
     ctx.globalAlpha=alpha;
   }
 
+  /* faint bright band where sky meets land — separates the planes */
+  {
+    const hA=.025+clamp(sim.precip,0,1)*.085;
+    const hg=ctx.createLinearGradient(0,horizonY-H*.045,0,horizonY+H*.012);
+    hg.addColorStop(0,rgb(P.green,0));
+    hg.addColorStop(.75,rgb(mixRGB(P.green,[255,255,255],.25),hA));
+    hg.addColorStop(1,rgb(P.green,0));
+    ctx.globalCompositeOperation="lighter";
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=hg; ctx.fillRect(0,horizonY-H*.045,W,H*.06);
+    ctx.globalCompositeOperation="source-over";
+  }
   /* landscape silhouette, sitting on the shoreline */
   if(landCv) ctx.drawImage(landCv,0,horizonY-2,W,lakeTop-horizonY+2);
 
@@ -2169,7 +2257,7 @@ function refreshReadouts(){
   $("kpEff").textContent=fmt(sim.effKp,1);
   $("kpDesc").textContent=T("kpDesc")[S.kp];
   $("speedVal").textContent=fmt(S.speed,1)+"×";
-  $("pitchVal").textContent=fmt(Math.round(S.pitch))+"%";
+  $("pitchVal").textContent=fmt(Math.round(S.pitch*.8))+"\u00b0";
   $("zoomVal").textContent=fmt(S.zoom,2)+"×";
   $("boostVal").textContent=fmt(S.boost)+"%";
   $("bloomVal").textContent=fmt(Math.round(S.bloom))+"%";
@@ -2183,9 +2271,9 @@ function refreshReadouts(){
 }
 
 /* --- performance guard -------------------------------------------- */
-const perf={rayScale:1,snowScale:1,windScale:1,windows:0,acc:0,frames:0,tripped:0};
+const perf={rayScale:1,snowScale:1,windScale:1,ribbonScale:1,coronaScale:1,reflectionScale:1,windows:0,acc:0,frames:0,tripped:0};
 function perfCheck(dt){
-  if(!S.perf||perf.tripped>=2) return;
+  if(!S.perf||perf.tripped>=3) return;
   perf.acc+=dt; perf.frames++;
   if(perf.acc>=1){
     const fps=perf.frames/perf.acc;
@@ -2193,11 +2281,21 @@ function perfCheck(dt){
     if(fps<35) perf.windows++; else perf.windows=0;
     if(perf.windows>=3){
       perf.windows=0; perf.tripped++;
-      perf.rayScale*=.65; perf.snowScale*=.6; perf.windScale*=.6;
-      retuneCurtains();
-      snowN=Math.max(20,Math.round(snowN*.6));
-      windN=Math.max(90,Math.round(windCap*perf.windScale));
-      CUR_S=Math.max(.42,CUR_S*.82); sizeOffscreens();
+      /* staged: always drop the least visible thing first */
+      if(perf.tripped===1){
+        perf.coronaScale=0;
+        perf.ribbonScale=.5;
+        retuneCurtains();
+      }else if(perf.tripped===2){
+        perf.rayScale*=.7; perf.snowScale*=.65; perf.windScale*=.65;
+        retuneCurtains();
+        snowN=Math.max(24,Math.round(snowN*.65));
+        windN=Math.max(90,Math.round(windCap*perf.windScale));
+        DPR_CAP=1.5; resize();
+      }else{
+        perf.reflectionScale=.5;
+        CUR_S=Math.max(.42,CUR_S*.8); sizeOffscreens();
+      }
       toast(T("tPerf"));
     }
   }
@@ -2378,8 +2476,8 @@ function initUI(){
   /* tabs */
   document.querySelectorAll(".tabs button").forEach(b=>{
     b.onclick=()=>{
-      document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("on"));
-      b.classList.add("on");
+      document.querySelectorAll(".tabs button").forEach(x=>{x.classList.remove("on");x.setAttribute("aria-selected","false");});
+      b.classList.add("on"); b.setAttribute("aria-selected","true");
       document.querySelectorAll(".tab-body").forEach(x=>x.classList.toggle("on",x.dataset.body===b.dataset.tab));
     };
   });
