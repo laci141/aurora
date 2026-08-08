@@ -1116,20 +1116,40 @@ function drawSpace(alpha,zoomExtra){
   ctx.restore();
 }
 
-/* a handful of distant stars for the space view (drawn from the seed) */
+/* space stars: slow moon-phase-like twinkle, random gradual appearing,
+   varied sizes and brightness */
 let spaceStars=null;
 function drawSpaceStars(){
   const base=ctx.globalAlpha;
   if(!spaceStars){
-    const rnd=mulberry32(SEED^0xbeef), n=160;
-    spaceStars=new Float32Array(n*3);
-    for(let i=0;i<n;i++){ spaceStars[i*3]=rnd(); spaceStars[i*3+1]=rnd(); spaceStars[i*3+2]=.2+rnd()*.6; }
+    const rnd=mulberry32(SEED^0xbeef);
+    const n=Math.round(210*(S.stars/100));
+    spaceStars=[];
+    for(let i=0;i<n;i++){
+      spaceStars.push({
+        x:rnd(),y:rnd(),
+        r:.4+Math.pow(rnd(),2.2)*1.9,
+        b:.25+rnd()*.75,
+        ph:rnd()*TAU, sp:.04+rnd()*.16,      /* slow breathing */
+        gph:rnd()*TAU, gsp:.006+rnd()*.020   /* very slow appear/vanish */
+      });
+    }
   }
-  ctx.fillStyle="#fff";
-  for(let i=0;i<spaceStars.length/3;i++){
-    const a=spaceStars[i*3+2]*.55;
-    ctx.globalAlpha=a*base;
-    ctx.fillRect(spaceStars[i*3]*W,spaceStars[i*3+1]*H,1.1,1.1);
+  for(const st of spaceStars){
+    const tw=.55+.45*Math.sin(sim.t*st.sp*TAU+st.ph);
+    const gate=smoothstep((Math.sin(sim.t*st.gsp*TAU+st.gph)+.55)/1.1);
+    const a=base*st.b*tw*gate;
+    if(a<=.01) continue;
+    const x=st.x*W, y=st.y*H;
+    if(st.r<.95){
+      ctx.globalAlpha=a*.8;
+      ctx.fillStyle="#dfe9ff";
+      ctx.fillRect(x,y,1.1,1.1);
+    }else{
+      ctx.globalAlpha=a;
+      const s2=st.r*3.2;
+      ctx.drawImage(SPR.dot,x-s2,y-s2,s2*2,s2*2);
+    }
   }
   ctx.globalAlpha=base;
 }
@@ -1158,24 +1178,6 @@ function drawSun(){
     const sz=r*(.06+rnd()*.10);
     ctx.globalAlpha=.10+.16*(.5+.5*Math.sin(sim.t*.9+i));
     ctx.drawImage(SPR.soft,px-sz,py-sz,sz*2,sz*2);
-  }
-  /* plasma jets breathing out of the limb — no drawn arcs, just light */
-  ctx.globalAlpha=1;
-  for(let i=0;i<4;i++){
-    const ph=(sim.t*.07+i*.29)%1;
-    const life=Math.sin(ph*Math.PI);
-    if(life<=0) continue;
-    const a=i*1.83+Math.sin(sim.t*.05+i)*0.5;
-    const jr=r*(.55+.5*life);
-    const bx=x+Math.cos(a)*r*.94, by=y+Math.sin(a)*r*.94;
-    ctx.save();
-    ctx.translate(bx,by); ctx.rotate(a);
-    ctx.globalAlpha=.22*life;
-    ctx.drawImage(tintSprite(SPR.streak,[255,168,84]),-jr*.15,-r*.10,jr,r*.20);
-    ctx.globalAlpha=.30*life;
-    const ps=r*(.28+.3*life);
-    ctx.drawImage(tintSprite(SPR.soft,[255,150,70]),jr*.55-ps,-ps,ps*2,ps*2);
-    ctx.restore();
   }
   /* eruption: a fan of plasma bursting off the limb toward Earth */
   if(sim.phase===PHASE.ERUPTION && sim.cme){
@@ -1248,7 +1250,7 @@ function drawFieldLines(){
     /* the field is never still: each shell breathes and its glow pulses */
     const breathe=1+Math.sin(sim.t*.42+fl.idx*.9+fl.flap)*.016;
     const pulse=.85+.15*Math.sin(sim.t*.7+fl.idx*1.3+fl.side*2.1);
-    const glow=(.15+ (fl.side?.06:.10)*(1-dayComp) + sim.precip*.24)*pulse;
+    const glow=(.24+ (fl.side?.08:.13)*(1-dayComp) + sim.precip*.28)*pulse;
     ctx.beginPath();
     for(let j=0;j<N;j++){
       const u=j/(N-1);
@@ -1256,9 +1258,12 @@ function drawFieldLines(){
       px*= tail*(1-dayComp)*breathe;
       py*= (1-dayComp*.55)*breathe;
       let sx=x0+px*R, sy=y0+py*R;
-      /* a slow wave travels along every line, day and night side alike */
-      sy+=Math.sin(u*4.6+sim.t*(.55+fl.idx*.11)+fl.flap)*R*.055*
-          (fl.side?1.3:.7)*clamp(fl.L/5,.4,1);
+      /* the solar wind visibly ripples the field: wave amplitude and
+         frequency follow the live wind flux */
+      sy+=Math.sin(u*(4.2+sim.windFlux*3.5)+sim.t*(.55+fl.idx*.11+sim.windFlux*.5)+fl.flap)
+          *R*(.04+.13*sim.windFlux)*(fl.side?1.4:.85)*clamp(fl.L/5,.4,1);
+      sx+=Math.sin(u*3.1-sim.t*(.4+sim.windFlux*.4)+fl.flap*1.7)
+          *R*(.02+.05*sim.windFlux)*clamp(fl.L/5,.3,1);
       if(flapA){
         sy+=Math.sin(px*.55 - sim.t*1.15 + fl.flap)*flapA*clamp(px/6,0,1);
       }
@@ -1270,8 +1275,14 @@ function drawFieldLines(){
       }
       j?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy);
     }
-    ctx.strokeStyle=`rgba(140,200,255,${glow})`;
-    ctx.lineWidth=Math.max(.7,R*.13);
+    /* colour runs cyan (inner shells) -> violet (outer), like the
+       satellite renderings; thin core line over a soft glow */
+    const cc=mixRGB([150,222,255],[186,146,255],fl.idx/6);
+    ctx.strokeStyle=rgb(cc,Math.min(.6,glow*.85));
+    ctx.lineWidth=Math.max(1.6,R*.19);
+    ctx.stroke();
+    ctx.strokeStyle=rgb(mixRGB(cc,[255,255,255],.3),Math.min(1,glow*2.4));
+    ctx.lineWidth=Math.max(.6,R*.06);
     ctx.stroke();
   }
   /* magnetopause / bow shock arc on the dayside */
@@ -2468,7 +2479,7 @@ function initUI(){
   bindRange("zoom","zoom");
   bindRange("boost","boost",()=>buildRaySprites(true));
   bindRange("bloom","bloom");
-  bindRange("stars","stars",()=>buildStarLayer());
+  bindRange("stars","stars",()=>{buildStarLayer();spaceStars=null;});
   bindSwitch("autoStorm","auto");
   bindSwitch("drift","drift");
   bindSwitch("tField","field");
