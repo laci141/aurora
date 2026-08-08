@@ -822,10 +822,10 @@ function buildRaySprites(force){
       const core=mixRGB(G,WHT,.34+f*.14);
       const bot=mixRGB(G,pink,purp*.85);
       grad.addColorStop(0,   rgb(bot,0));
-      grad.addColorStop(.030,rgb(bot,clamp(.62*boost*(.35+.65*purp),0,1)));
-      grad.addColorStop(.075,rgb(mixRGB(core,pink,purp*.30),clamp(.88*boost,0,1)));
-      grad.addColorStop(.13, rgb(core,clamp(.86*boost,0,1)));
-      grad.addColorStop(.25, rgb(mixRGB(G,WHT,.08),clamp(.72*boost,0,1)));
+      grad.addColorStop(.06, rgb(bot,clamp(.30*boost*(.35+.65*purp),0,1)));
+      grad.addColorStop(.13, rgb(mixRGB(core,pink,purp*.30),clamp(.62*boost,0,1)));
+      grad.addColorStop(.20, rgb(core,clamp(.74*boost,0,1)));
+      grad.addColorStop(.30, rgb(mixRGB(G,WHT,.08),clamp(.66*boost,0,1)));
       grad.addColorStop(.45, rgb(mixRGB(G,R,redMix*.26),clamp(.40*boost,0,1)));
       grad.addColorStop(.62, rgb(mixRGB(G,R,redMix*.50),clamp(.22*boost,0,1)));
       grad.addColorStop(.78, rgb(mixRGB(G,R,redMix*.78),clamp(.11*boost,0,1)));
@@ -1674,6 +1674,10 @@ function drawCurtains(g,sc,pitchPx){
       const wN=.4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
       const rw=rwBase*wN;
       const hgt=hBase*hN*(.6+.7*iN);
+      /* a ray too short would read as a glowing stub — fade it away */
+      const stub=smoothstep(hgt/(gh*.07));
+      inten*=stub;
+      if(inten<=.012) continue;
       let bucket=clamp(Math.round((bucketBase*.75+iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
       if(bucket>bucketMax) bucket=bucketMax;
       const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
@@ -1683,8 +1687,8 @@ function drawCurtains(g,sc,pitchPx){
       /* bright ray core: only the strongest rays get a narrow hot centre */
       if((iN>.72||isRibbon) && inten>.14){
         const coreW=Math.max(.8,rw*.22);
-        g.globalAlpha=clamp(inten*.38,0,.55);
-        g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.92, coreW, hgt*.92);
+        g.globalAlpha=clamp(inten*.34,0,.5);
+        g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
       }
     }
   }
