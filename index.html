@@ -805,11 +805,15 @@ function buildRaySprites(force){
   const WHT=[255,255,255];
   /* three hue families along every curtain, like in real photographs:
      emerald, teal-cyan and spring yellow-green */
-  const HUES=[P.green,
-              mixRGB(P.green,[56,214,255],.52),
-              mixRGB(P.green,[212,255,110],.42),
-              mixRGB(P.green,[178,126,255],.64),
-              mixRGB(P.green,[255,102,192],.74)];
+  const HUES=[P.green,                                /* 0 green — dominant   */
+              mixRGB(P.green,[56,214,255],.52),       /* 1 teal — little      */
+              mixRGB(P.green,[212,255,110],.42),      /* 2 spring green       */
+              mixRGB(P.green,[178,126,255],.76),      /* 3 lila               */
+              mixRGB(P.green,[255,92,180],.86),       /* 4 pink-magenta — lots*/
+              mixRGB(P.green,[255,232,90],.72),       /* 5 sarga              */
+              mixRGB(P.green,[255,168,70],.76),       /* 6 narancs — little   */
+              mixRGB(P.green,[126,200,255],.66),      /* 7 vilagoskek — rare  */
+              mixRGB(P.green,[230,60,120],.80)];      /* 8 bibor              */
   raySprites=[];
   for(let h=0;h<HUES.length;h++){
     const row=[];
@@ -1696,12 +1700,21 @@ function drawCurtains(g,sc,pitchPx){
       if(inten<=.012) continue;
       let bucket=clamp(Math.round((bucketBase*.75+iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
       if(bucket>bucketMax) bucket=bucketMax;
-      const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
-      /* storm skies carry broad pink / violet / teal bands like the
-         footage from real Kp8-9 nights */
-      const tealTh=-.24+softHi*.08, lavTh=.52-softHi*.14,
-            sprTh=.26-softHi*.05, pinkTh=.68-softHi*.22;
-      const hue=hueN<tealTh?1:(hueN>pinkTh?4:(hueN>lavTh?3:(hueN>sprTh?2:0)));
+      const gx=x/gw;
+      /* per-ray dither feathers the colour-field borders into gradual
+         mixed zones — no hard walls between colours */
+      const dith=c.n3(u*37.0+c.phase*3.1)*.14;
+      const hueN=curtains[0].n1(gx*3.2+t*.012)+curtains[0].n3(gx*1.3-t*.008)*.5+dith;
+      /* two noise axes: a warm band system led by pink, over a cool
+         green/teal base — band widths grow with storm strength */
+      const warm=curtains[0].n2(gx*2.4+t*.010)+dith*.8;
+      let hue;
+      if(warm>.28-softHi*.14){
+        const w2=clamp((warm-(.28-softHi*.14))/.6,0,1);
+        hue=w2<.40?4:(w2<.58?3:(w2<.72?8:(w2<.86?5:6)));
+      }else{
+        hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
+      }
       g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
@@ -1721,43 +1734,10 @@ function drawCurtains(g,sc,pitchPx){
       const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
       const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
       g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
-      const vc=k%4===0?mixRGB(P.green,[56,214,255],.4)
-             :k%4===1?P.green
-             :k%4===2?mixRGB(P.green,[186,140,255],.35)
-             :mixRGB(P.green,[255,118,196],.42);
+      const vcs=[[255,92,180],[56,214,255],[178,126,255],[255,92,180],[255,200,90],[0,0,0],[230,60,120]];
+      const vv=vcs[k%7];
+      const vc=vv[0]===0?P.green:mixRGB(P.green,vv,.45);
       g.drawImage(tintSprite(SPR.soft,vc),vx-vs,vy-vs*.6,vs*2,vs*1.2);
-    }
-  }
-  /* overhead corona at Kp 8-9: curtains seen from below, converging on a
-     seeded zenith point — clustered, uneven, soft; not a starburst */
-  if(S.kp>=8 && perf.coronaScale>0 && !isMobile && !REDUCED){
-    const cor=clamp((S.kp-7.5)/1.5,0,1)*clamp(p*1.25,0,1)*perf.coronaScale*.55;
-    if(cor>.03){
-      const cr1=mulberry32(SEED^0x7c0)(), cr2=mulberry32(SEED^0x7c1)();
-      const ccx=gw*(.36+cr1*.28), ccy=gh*(.13+cr2*.08)+pitchPx*sc*1.1;
-      /* soft glow pool at the convergence point */
-      const gs=gw*.16;
-      g.globalAlpha=cor*.16;
-      g.drawImage(tintSprite(SPR.soft,P.green),ccx-gs,ccy-gs*.7,gs*2,gs*1.4);
-      const M=Math.round(58*perf.coronaScale);
-      for(let i=0;i<M;i++){
-        /* clustered, drifting angles with real gaps — never an even fan */
-        const az=curtains[0].n1(i*.53+sim.t*.02);
-        const gate=curtains[1].n2(i*.71+sim.t*.05);
-        if(gate<-.05) continue;
-        const a=(i/M)*TAU+az*.9;
-        const nz=curtains[0].n2(i*.83+sim.t*.16);
-        const len=gh*(.10+.30*Math.pow(nz*.5+.5,1.6));
-        const inner=gh*(.05+.03*(curtains[0].n3(i*.61)*.5+.5));
-        const rw2=Math.max(1.5,gw*.006*(.4+Math.abs(nz)));
-        const hueC=az>.25?2:(az<-.3?1:0);
-        const bkt=clamp(Math.round((.45+.4*(nz*.5+.5))*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
-        g.save();
-        g.translate(ccx,ccy); g.rotate(a);
-        g.globalAlpha=cor*(.05+.16*clamp(gate,0,1));
-        g.drawImage(raySprites[hueC][bkt],-rw2*.5,inner,rw2,len);
-        g.restore();
-      }
     }
   }
   g.globalAlpha=1;
