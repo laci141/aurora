@@ -318,9 +318,11 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
       <input type="range" id="bloom" min="0" max="100" step="1" value="45">
     </div>
     <div class="row">
-      <div class="lbl"><span data-i18n="starDensity"></span><span class="v" id="starsVal">100%</span></div>
-      <input type="range" id="stars" min="20" max="180" step="5" value="100">
+      <div class="lbl"><span data-i18n="starDensity"></span><span class="v" id="starsVal">60%</span></div>
+      <input type="range" id="stars" min="10" max="100" step="1" value="60">
     </div>
+    <label class="sw-row"><span class="t" data-i18n="autoStars"></span>
+      <span class="sw"><input type="checkbox" id="autoStars"><i></i></span></label>
     <label class="sw-row"><span class="t" data-i18n="perfGuard"></span>
       <span class="sw"><input type="checkbox" id="perfGuard" checked><i></i></span></label>
     <div class="note" data-i18n="perfNote"></div>
@@ -433,9 +435,10 @@ const S={
   labels:qBool("labels",false),
   pal:   Math.round(qNum("pal",0,0,3)),
   autoPal:qBool("autopal",false),
+  autoStars:qBool("autostars",false),
   boost: qNum("boost",15,0,25),
   bloom: qNum("bloom",45,0,100),
-  stars: qNum("stars",100,20,180),
+  stars: qNum("stars",60,10,100),
   perf:  qBool("perf",true),
   lang:  Q.get("lang") || localStorage.getItem("aurora.lang") || "en"
 };
@@ -468,7 +471,7 @@ const I18N={
   secLayers:"Layers",fieldLines:"Field lines",particleFlow:"Particle flow",
   snowfall:"Snowfall",snowSpeed:"Snowfall speed",lake:"Lake reflection",moon:"Moon",labels:"Labels",
   secPalette:"Palette",autoPalette:"Auto-switch palette",
-  boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",perfGuard:"Performance guard",
+  boost:"Colour boost",bloom:"Glow (bloom)",starDensity:"Star density",autoStars:"Auto star density",perfGuard:"Performance guard",
   perfNote:"Thins rays, snow and particles if the frame rate drops.",
   secActions:"Actions",photo:"📷 Photo",copyLink:"🔗 Copy link",projector:"▶ Projector",hideUI:"👁 Hide UI",
   seedNote:"The link carries the seed and every setting — the same sky comes back exactly.",
@@ -506,7 +509,7 @@ const I18N={
   secLayers:"Rétegek",fieldLines:"Erővonalak",particleFlow:"Részecskeáram",
   snowfall:"Hóesés",snowSpeed:"Hóesés sebessége",lake:"Tükröződés a tavon",moon:"Hold",labels:"Feliratok",
   secPalette:"Paletta",autoPalette:"Automatikus palettaváltás",
-  boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",perfGuard:"Teljesítményőr",
+  boost:"Színerősítés",bloom:"Ragyogás (bloom)",starDensity:"Csillagsűrűség",autoStars:"Auto csillagsűrűség",perfGuard:"Teljesítményőr",
   perfNote:"Ritkítja a sugarakat, a havat és a részecskéket, ha esik a képkockaszám.",
   secActions:"Műveletek",photo:"📷 Fotó",copyLink:"🔗 Link másolása",projector:"▶ Vetítő",hideUI:"👁 Felület elrejtése",
   seedNote:"A link viszi a magot és minden beállítást — ugyanaz az égbolt tér vissza.",
@@ -544,7 +547,7 @@ const I18N={
   secLayers:"Straturi",fieldLines:"Linii de câmp",particleFlow:"Flux de particule",
   snowfall:"Ninsoare",snowSpeed:"Viteza ninsorii",lake:"Reflexie pe lac",moon:"Luna",labels:"Etichete",
   secPalette:"Paletă",autoPalette:"Schimbare automată",
-  boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",perfGuard:"Gardă de performanță",
+  boost:"Intensitate culoare",bloom:"Strălucire (bloom)",starDensity:"Densitatea stelelor",autoStars:"Densitate auto a stelelor",perfGuard:"Gardă de performanță",
   perfNote:"Reduce razele, fulgii și particulele dacă scade rata de cadre.",
   secActions:"Acțiuni",photo:"📷 Fotografie",copyLink:"🔗 Copiază linkul",projector:"▶ Proiector",hideUI:"👁 Ascunde interfața",
   seedNote:"Linkul poartă sămânța și toate setările — același cer revine exact.",
@@ -582,7 +585,7 @@ const I18N={
   secLayers:"Ebenen",fieldLines:"Feldlinien",particleFlow:"Teilchenstrom",
   snowfall:"Schneefall",snowSpeed:"Schneefall-Tempo",lake:"Spiegelung im See",moon:"Mond",labels:"Beschriftungen",
   secPalette:"Palette",autoPalette:"Palette automatisch wechseln",
-  boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",perfGuard:"Leistungswächter",
+  boost:"Farbverstärkung",bloom:"Leuchten (Bloom)",starDensity:"Sterndichte",autoStars:"Auto-Sterndichte",perfGuard:"Leistungswächter",
   perfNote:"Reduziert Strahlen, Schnee und Teilchen, wenn die Bildrate fällt.",
   secActions:"Aktionen",photo:"📷 Foto",copyLink:"🔗 Link kopieren",projector:"▶ Projektor",hideUI:"👁 UI ausblenden",
   seedNote:"Der Link trägt den Seed und alle Einstellungen — derselbe Himmel kehrt exakt zurück.",
@@ -1443,8 +1446,23 @@ function drawSpaceLabels(){
    --------------------------------------------------------------- */
 
 /* --- static seeded starfield with a Milky Way band, own layer ------ */
-let starCv=null;
+let starCv=null, skyTwinkle=null;
 function buildStarLayer(){
+  /* live overlay stars: they breathe slowly and drift in and out */
+  {
+    const rnd=mulberry32(SEED^0x7717^Math.round(S.stars));
+    const n=Math.round(20+95*(S.stars/100));
+    skyTwinkle=[];
+    for(let i=0;i<n;i++){
+      skyTwinkle.push({
+        x:rnd(),y:Math.pow(rnd(),1.3),
+        r:.5+Math.pow(rnd(),2)*1.7,
+        b:.3+rnd()*.7,
+        ph:rnd()*TAU,sp:.04+rnd()*.15,
+        gph:rnd()*TAU,gsp:.006+rnd()*.02
+      });
+    }
+  }
   const w=Math.ceil(W), h=Math.ceil(H*1.25);
   starCv=mkCanvas(w*DPR,h*DPR);
   const g=starCv.getContext("2d");
@@ -1928,8 +1946,26 @@ function drawSky(alpha,scaleExtra){
   if(starCv){
     const sy=-H*.12 + pitchPx*.35;
     /* a bright aurora "over-exposes" the faint stars a little */
-    ctx.globalAlpha=alpha*(.95-clamp(sim.precip,0,1)*.28);
+    const expo=(.95-clamp(sim.precip,0,1)*.28);
+    ctx.globalAlpha=alpha*expo;
     ctx.drawImage(starCv,0,sy,W,H*1.25);
+    /* live stars: slow random breathing on top of the baked field */
+    if(skyTwinkle){
+      ctx.fillStyle=rgb(P.star,1);
+      for(const st of skyTwinkle){
+        const tw=.5+.5*Math.sin(sim.t*st.sp*TAU+st.ph);
+        const gate=smoothstep((Math.sin(sim.t*st.gsp*TAU+st.gph)+.55)/1.1);
+        const a=alpha*expo*st.b*tw*gate;
+        if(a<=.015) continue;
+        const x=st.x*W, y=st.y*(horizonY-H*.02)+pitchPx*.35;
+        ctx.globalAlpha=a;
+        ctx.beginPath(); ctx.arc(x,y,st.r,0,TAU); ctx.fill();
+        if(st.r>1.5){
+          ctx.globalAlpha=a*.4;
+          ctx.drawImage(SPR.soft,x-st.r*4,y-st.r*4,st.r*8,st.r*8);
+        }
+      }
+    }
     ctx.globalAlpha=alpha;
   }
   if(S.moon) drawMoon(alpha,pitchPx);
@@ -2257,6 +2293,7 @@ function pushURL(){
   const b={drift:S.drift,auto:S.auto,field:S.field,flow:S.flow,snow:S.snow,lake:S.lake,moon:S.moon,
            labels:S.labels,autopal:S.autoPal,perf:S.perf};
   for(const k in b) q.set(k,b[k]?"1":"0");
+  q.set("autostars",S.autoStars?"1":"0");
   history.replaceState(null,"","?"+q.toString());
 }
 
@@ -2309,7 +2346,7 @@ function refreshReadouts(){
   $("zoomVal").textContent=fmt(S.zoom,2)+"×";
   $("boostVal").textContent=fmt(S.boost)+"%";
   $("bloomVal").textContent=fmt(Math.round(S.bloom))+"%";
-  $("starsVal").textContent=fmt(S.stars)+"%";
+  $("starsVal").textContent=fmt(Math.round(S.stars))+"%";
   $("vMasterVal").textContent=fmt(Math.round(Audio.vol.master*100))+"%";
   $("vWindVal").textContent=fmt(Math.round(Audio.vol.wind*100))+"%";
   $("vDroneVal").textContent=fmt(Math.round(Audio.vol.drone*100))+"%";
@@ -2405,6 +2442,18 @@ function frame(now){
     autoPalT-=dt;
     if(autoPalT<=0){ autoPalT=26+Math.random()*20; setPalette((S.pal+1)%PALETTES.length); }
   }
+  /* auto star density: wanders randomly and smoothly between 10 and 100% */
+  if(S.autoStars && !REDUCED){
+    starAutoT-=dt;
+    if(starAutoT<=0){ starTarget=10+Math.random()*90; starAutoT=9+Math.random()*13; }
+    S.stars=lerp(S.stars,starTarget,1-Math.pow(.75,dt));
+    if(Math.abs(S.stars-starApplied)>3){
+      starApplied=S.stars;
+      $("stars").value=S.stars;
+      $("starsVal").textContent=fmt(Math.round(S.stars))+"%";
+      buildStarLayer(); spaceStars=null;
+    }
+  }
   /* label fade */
   const lt=S.labels?1:0;
   labelFade=lerp(labelFade,lt,1-Math.pow(.004,dt));
@@ -2447,7 +2496,7 @@ function frame(now){
   perfCheck(dt);
   requestAnimationFrame(frame);
 }
-let refreshTick=0, autoPalT=26;
+let refreshTick=0, autoPalT=26, starAutoT=4, starTarget=60, starApplied=-99;
 
 /* ---------------------------------------------------------------
    12. wiring
@@ -2471,7 +2520,7 @@ function initUI(){
   $("kp").value=S.kp; $("speed").value=S.speed; $("pitch").value=S.pitch;
   $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
   $("autoStorm").checked=S.auto; $("perfGuard").checked=S.perf;
-  $("autoPal").checked=S.autoPal;
+  $("autoPal").checked=S.autoPal; $("autoStars").checked=S.autoStars;
 
   bindRange("kp","kp",()=>{ $("kpDesc").textContent=T("kpDesc")[S.kp]; });
   bindRange("speed","speed");
@@ -2490,6 +2539,7 @@ function initUI(){
   bindSwitch("tMoon","moon");
   bindSwitch("tLabels","labels");
   bindSwitch("autoPal","autoPal");
+  bindSwitch("autoStars","autoStars");
   bindSwitch("perfGuard","perf");
 
   $("btnSky").onclick=()=>setView("sky");
