@@ -805,9 +805,15 @@ function buildRaySprites(force){
   const WHT=[255,255,255];
   /* three hue families along every curtain, like in real photographs:
      emerald, teal-cyan and spring yellow-green */
-  const HUES=[P.green,
-              mixRGB(P.green,[56,214,255],.52),
-              mixRGB(P.green,[212,255,110],.42)];
+  const HUES=[P.green,                                /* 0 green — dominant   */
+              mixRGB(P.green,[56,214,255],.52),       /* 1 teal — little      */
+              mixRGB(P.green,[212,255,110],.42),      /* 2 spring green       */
+              mixRGB(P.green,[178,126,255],.76),      /* 3 lila               */
+              mixRGB(P.green,[255,92,180],.86),       /* 4 pink-magenta — lots*/
+              mixRGB(P.green,[255,232,90],.72),       /* 5 sarga              */
+              mixRGB(P.green,[255,168,70],.76),       /* 6 narancs — little   */
+              mixRGB(P.green,[126,200,255],.66),      /* 7 vilagoskek — rare  */
+              mixRGB(P.green,[230,60,120],.80)];      /* 8 bibor              */
   raySprites=[];
   for(let h=0;h<HUES.length;h++){
     const row=[];
@@ -883,7 +889,7 @@ function stepSim(dt){
   sim.phaseT+=dt;
   const base=S.kp/9;
   /* baseline precipitation from Kp alone — Kp 9 must burn even between storms */
-  const bp=.05+Math.pow(base,1.2)*.72;
+  const bp=.05+Math.pow(base,1.0)*.78;
 
   switch(sim.phase){
     case PHASE.QUIET:
@@ -1565,8 +1571,8 @@ function buildCurtains(){
   /* 7 logical layers: 2 faint background curtains, 2 medium, 2 strong,
      and 1 thin bright ribbon — tuned to read as ONE aurora system */
   const TYPES=[
-    {kind:"curtain",depth:.98,thresh:.02},
-    {kind:"curtain",depth:.84,thresh:.06},
+    {kind:"curtain",depth:.98,thresh:.02,soft:true},
+    {kind:"curtain",depth:.84,thresh:.06,soft:true},
     {kind:"curtain",depth:.62,thresh:.13},
     {kind:"curtain",depth:.46,thresh:.22},
     {kind:"curtain",depth:.24,thresh:.34},
@@ -1577,6 +1583,7 @@ function buildCurtains(){
     const T=TYPES[i];
     curtains.push({
       kind:T.kind,
+      soft:!!T.soft,          /* V1-style wide fused rays: the aurora's body */
       depth:clamp(T.depth+(rnd()-.5)*.06,0,1),
       thresh:T.thresh,
       rays:rayCountFor(T.kind),
@@ -1617,6 +1624,16 @@ function drawCurtains(g,sc,pitchPx){
   const gw=W*sc, gh=H*sc;
   /* Kp drives GEOMETRY, not just brightness: span, height, motion speed */
   const kpn=clamp(Math.max(S.kp/9,sim.effKp/9),0,1);
+  /* above ~Kp6 the display melts toward the soft V1 fabric: wide fused
+     rays, gentle variation, no hard cores — like storm footage */
+  const softHi=smoothstep((kpn-.58)/.32);
+  /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
+  const softCol=Math.min(softHi,.84);
+  /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
+  const hb=kpn<=.333?lerp(1.0,1.50,clamp(kpn/.333,0,1))
+         :kpn<=.55?lerp(1.50,1.30,(kpn-.333)/.217)
+         :kpn<=.78?lerp(1.30,1.50,(kpn-.55)/.23)
+         :lerp(1.50,1.25,clamp((kpn-.78)/.22,0,1));
   g.globalCompositeOperation="lighter";
   for(let ci=0;ci<curtains.length;ci++){
     const c=curtains[ci];
@@ -1632,11 +1649,13 @@ function drawCurtains(g,sc,pitchPx){
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
     /* thin, near-vertical rays: narrow base width, varied per ray */
-    const rwBase=isRibbon?Math.max(1.0,dx*.95):Math.max(1.0,dx*(1.15+near*.45));
+    const rwBase=isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
+                :c.soft?Math.max(2.0,dx*1.9)
+                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi));
     const drift=t*c.driftSpd*40*(1+kpn*.9);
-    const hBase=isRibbon
+    const hBase=(isRibbon
       ? gh*(.05+.07*p)
-      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn);
+      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn))*hb;
     const bucketBase=clamp(p*1.15+depth*.05,0,1);
     /* not every layer carries red — oxygen 630nm is patchy in reality */
     const bucketMax=Math.round((RAY_BUCKETS-1)*(.55+.45*c.redSeed));
@@ -1649,7 +1668,9 @@ function drawCurtains(g,sc,pitchPx){
 
     for(let i=0;i<nRays;i++){
       const u=i/(nRays-1);
-      const x=x0+i*dx;
+      /* jitter each ray off the even grid so beams cluster and part
+         naturally instead of standing in a picket row */
+      const x=x0+i*dx+c.n2(u*23+c.phase*2.3)*dx*.9;
       /* the living base arc: one slow big wave + a medium wave + noise */
       const arc=Math.sin(u*TAU*1.15+tt*.055+c.phase)*gh*.018
                +Math.sin(u*TAU*2.7-tt*.025)*gh*.010;
@@ -1662,8 +1683,13 @@ function drawCurtains(g,sc,pitchPx){
       const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
       /* strong per-ray intensity variation: some rays barely there */
       const rayNoise=c.n3(u*7.0+c.phase+tt*.12);
-      let inten=vis*iN*(.45+.55*near)*(.45+.55*clamp(rayNoise*.5+.5,0,1));
-      if(isRibbon) inten*=1.5;
+      const softLike=c.soft?1:softHi;
+      const rayVar=lerp(.45+.55*clamp(rayNoise*.5+.5,0,1),
+                        .75+.25*clamp(rayNoise*.5+.5,0,1),softLike);
+      let inten=vis*iN*(.45+.55*near)*rayVar;
+      if(!c.soft&&!isRibbon) inten*=lerp(.88,1.1,softHi);
+      if(isRibbon) inten*=1.35;
+      if(c.soft)   inten*=1.7;      /* the veil body glows like V1 did */
       inten*=.86+.14*Math.sin(t*(5.5+i*.37)+i*2.1);
       if(surgePos>-1){
         const d=Math.abs(u-surgePos);
@@ -1671,7 +1697,8 @@ function drawCurtains(g,sc,pitchPx){
       }
       if(inten<=.012) continue;
       /* per-ray width: thin, medium, a few wide, some hairline */
-      const wN=.4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
+      const wN=c.soft? .85+.3*Math.abs(c.n2(u*11+c.phase*1.7))
+                     : .4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
       const rw=rwBase*wN;
       const hgt=hBase*hN*(.6+.7*iN);
       /* a ray too short would read as a glowing stub — fade it away */
@@ -1680,51 +1707,48 @@ function drawCurtains(g,sc,pitchPx){
       if(inten<=.012) continue;
       let bucket=clamp(Math.round((bucketBase*.75+iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
       if(bucket>bucketMax) bucket=bucketMax;
-      const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
-      const hue=hueN<-.28?1:(hueN>.34?2:0);
+      const gx=x/gw;
+      /* per-ray dither feathers the colour-field borders into gradual
+         mixed zones; the blend width grows with Kp:
+         ~30% at Kp3, 35% at Kp7, 60% at Kp9 */
+      const blend=kpn<=.333?.30
+                 :kpn<=.778?lerp(.30,.44,(kpn-.333)/.445)
+                 :lerp(.44,.90,clamp((kpn-.778)/.222,0,1));
+      const dith=c.n3(u*37.0+c.phase*3.1)*blend*.5;
+      const hueN=curtains[0].n1(gx*3.2+t*.012)+curtains[0].n3(gx*1.3-t*.008)*.5+dith;
+      /* two noise axes: a warm band system led by pink, over a cool
+         green/teal base — band widths grow with storm strength */
+      const warm=curtains[0].n2(gx*2.4+t*.010)+dith*.8;
+      let hue;
+      if(warm>.28-softCol*.14){
+        const w2=clamp((warm-(.28-softCol*.14))/.6,0,1);
+        hue=w2<.40?4:(w2<.58?3:(w2<.72?8:(w2<.86?5:6)));
+      }else{
+        hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
+      }
       g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
-      if((iN>.72||isRibbon) && inten>.14){
+      if((iN>.72||isRibbon) && inten>.14 && !c.soft && softHi<.65){
         const coreW=Math.max(.8,rw*.22);
-        g.globalAlpha=clamp(inten*.34,0,.5);
+        g.globalAlpha=clamp(inten*.27,0,.42);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
       }
     }
   }
   /* veil / patch: big soft dim pools of light behind everything */
-  if(p>.36){
-    const nV=isMobile?3:5;
-    const vA=clamp((p-.36)*.16,0,.09);
+  if(p>.30){
+    const nV=isMobile?4:7;
+    const vA=clamp((p-.30)*.2,0,.12);
     for(let k=0;k<nV;k++){
       const vx=gw*(.12+.76*(curtains[0].n1(k*3.17+sim.t*.008)*.5+.5));
       const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
       const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
       g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
-      g.drawImage(tintSprite(SPR.soft,P.green),vx-vs,vy-vs*.6,vs*2,vs*1.2);
-    }
-  }
-  /* overhead corona at Kp 8-9: rays converging on a seeded zenith point */
-  if(S.kp>=8 && perf.coronaScale>0 && !isMobile && !REDUCED){
-    const cor=clamp((S.kp-7.5)/1.5,0,1)*clamp(p*1.25,0,1)*perf.coronaScale;
-    if(cor>.03){
-      const cr1=mulberry32(SEED^0x7c0)(), cr2=mulberry32(SEED^0x7c1)();
-      const ccx=gw*(.36+cr1*.28), ccy=gh*(.13+cr2*.08)+pitchPx*sc*1.1;
-      const M=Math.round(44*perf.coronaScale);
-      for(let i=0;i<M;i++){
-        const a=(i/M)*TAU+Math.sin(sim.t*.1)*.05;
-        const nz=curtains[0].n2(i*.83+sim.t*.16);
-        const len=gh*(.13+.20*(nz*.5+.5));
-        const inner=gh*(.035+.015*(curtains[0].n3(i*.61)*.5+.5));
-        const rw2=Math.max(1.2,gw*.0035*(.5+Math.abs(nz)));
-        const bkt=clamp(Math.round((.55+.35*(nz*.5+.5))*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
-        g.save();
-        g.translate(ccx,ccy); g.rotate(a);
-        g.globalAlpha=cor*(.10+.26*clamp(nz*.5+.5,0,1));
-        /* bright end outward — near the convergence point the corona is dim */
-        g.drawImage(raySprites[0][bkt],-rw2*.5,inner,rw2,len);
-        g.restore();
-      }
+      const vcs=[[255,92,180],[56,214,255],[178,126,255],[255,92,180],[255,200,90],[0,0,0],[230,60,120]];
+      const vv=vcs[k%7];
+      const vc=vv[0]===0?P.green:mixRGB(P.green,vv,.45);
+      g.drawImage(tintSprite(SPR.soft,vc),vx-vs,vy-vs*.6,vs*2,vs*1.2);
     }
   }
   g.globalAlpha=1;
