@@ -319,7 +319,7 @@ body.shooting #panel,body.shooting #restore,body.shooting #credit,body.shooting 
     </div>
     <div class="row">
       <div class="lbl"><span data-i18n="starDensity"></span><span class="v" id="starsVal">60%</span></div>
-      <input type="range" id="stars" min="10" max="100" step="1" value="60">
+      <input type="range" id="stars" min="10" max="250" step="1" value="60">
     </div>
     <label class="sw-row"><span class="t" data-i18n="autoStars"></span>
       <span class="sw"><input type="checkbox" id="autoStars"><i></i></span></label>
@@ -438,7 +438,7 @@ const S={
   autoStars:qBool("autostars",false),
   boost: qNum("boost",15,0,25),
   bloom: qNum("bloom",45,0,100),
-  stars: qNum("stars",60,10,100),
+  stars: qNum("stars",60,10,250),
   perf:  qBool("perf",true),
   lang:  Q.get("lang") || localStorage.getItem("aurora.lang") || "en"
 };
@@ -2442,10 +2442,10 @@ function frame(now){
     autoPalT-=dt;
     if(autoPalT<=0){ autoPalT=26+Math.random()*20; setPalette((S.pal+1)%PALETTES.length); }
   }
-  /* auto star density: wanders randomly and smoothly between 10 and 100% */
+  /* auto star density: wanders randomly and smoothly between 10 and 250% */
   if(S.autoStars && !REDUCED){
     starAutoT-=dt;
-    if(starAutoT<=0){ starTarget=10+Math.random()*90; starAutoT=9+Math.random()*13; }
+    if(starAutoT<=0){ starTarget=10+Math.random()*240; starAutoT=9+Math.random()*13; }
     S.stars=lerp(S.stars,starTarget,1-Math.pow(.75,dt));
     if(Math.abs(S.stars-starApplied)>3){
       starApplied=S.stars;
