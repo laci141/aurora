@@ -1604,10 +1604,12 @@ function rayCountFor(kind){
 function retuneCurtains(){ for(const c of curtains) c.rays=rayCountFor(c.kind); }
 
 /* offscreen curtain layer (also reused for the lake reflection) */
-let curCv=null,curCtx=null,CUR_S=0.62;
+let curCv=null,curCtx=null,CUR_S=0.62,bloomCv=null,bloomCtx=null;
 function sizeOffscreens(){
   const w=Math.max(2,Math.round(W*CUR_S)), h=Math.max(2,Math.round(H*CUR_S));
   curCv=mkCanvas(w,h); curCtx=curCv.getContext("2d");
+  bloomCv=mkCanvas(Math.max(2,Math.round(W*.28)),Math.max(2,Math.round(H*.28)));
+  bloomCtx=bloomCv.getContext("2d");
 }
 
 function drawCurtains(g,sc,pitchPx){
@@ -1679,7 +1681,7 @@ function drawCurtains(g,sc,pitchPx){
       g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
-      if(iN>.72||isRibbon){
+      if((iN>.72||isRibbon) && inten>.14){
         const coreW=Math.max(.8,rw*.22);
         g.globalAlpha=clamp(inten*.38,0,.55);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.92, coreW, hgt*.92);
@@ -1905,10 +1907,13 @@ function drawSky(alpha,scaleExtra){
   /* bloom: the curtain layer once more, blurred and additive — the hazy
      photographic glow. Skipped when the performance guard has tripped. */
   if(S.bloom>0 && perf.tripped===0 && "filter" in ctx){
-    ctx.filter=`blur(${Math.round(6+S.bloom*.14)}px)`;
+    /* blur at ~1/4 resolution, then upscale — same glow, far cheaper */
+    bloomCtx.clearRect(0,0,bloomCv.width,bloomCv.height);
+    bloomCtx.filter=`blur(${Math.max(2,Math.round((6+S.bloom*.14)*.28))}px)`;
+    bloomCtx.drawImage(curCv,0,0,bloomCv.width,bloomCv.height);
+    bloomCtx.filter="none";
     ctx.globalAlpha=alpha*(S.bloom/100)*.6;
-    ctx.drawImage(curCv,0,0,W,H);
-    ctx.filter="none";
+    ctx.drawImage(bloomCv,0,0,W,H);
   }
   ctx.globalCompositeOperation="source-over";
 
