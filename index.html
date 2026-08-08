@@ -1679,13 +1679,13 @@ function drawCurtains(g,sc,pitchPx){
       /* the living base arc: one slow big wave + a medium wave + noise */
       const arc=Math.sin(u*TAU*1.15+tt*.055+c.phase)*gh*.018
                +Math.sin(u*TAU*2.7-tt*.025)*gh*.010;
-      const baseY=(horizonY*sc) - gh*(.02+c.yOff*.04+p*.06*near)
+      const baseY=(horizonY*sc) - gh*(.02+c.yOff*.015+p*.025*near)
                  + pitchPx*sc*(.6+near*.8) + arc;
       const fx=u*6.2*c.foldA+drift*.08+c.phase;
       const fold=c.n1(fx)*.55 + c.n2(fx*2.35+11)*.28 + c.n3(fx*5.1+31)*.13;
       /* extra per-ray jitter dissolves the flat 'starting plate' the
          base otherwise forms at high activity */
-      const baseJit=c.n3(u*13.7+c.phase*1.9+tt*.06)*gh*(.010+.032*kpn);
+      const baseJit=c.n3(u*13.7+c.phase*1.9+tt*.06)*gh*(.024+.046*kpn);
       const y=baseY + fold*gh*(.055+.055*near+p*.045)+baseJit;
       const hN=.55+.45*c.n2(u*3.1+tt*.05+c.phase);
       const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
