@@ -808,7 +808,8 @@ function buildRaySprites(force){
   const HUES=[P.green,
               mixRGB(P.green,[56,214,255],.52),
               mixRGB(P.green,[212,255,110],.42),
-              mixRGB(P.green,[186,140,255],.46)];
+              mixRGB(P.green,[178,126,255],.64),
+              mixRGB(P.green,[255,102,192],.74)];
   raySprites=[];
   for(let h=0;h<HUES.length;h++){
     const row=[];
@@ -1619,6 +1620,9 @@ function drawCurtains(g,sc,pitchPx){
   const gw=W*sc, gh=H*sc;
   /* Kp drives GEOMETRY, not just brightness: span, height, motion speed */
   const kpn=clamp(Math.max(S.kp/9,sim.effKp/9),0,1);
+  /* above ~Kp6 the display melts toward the soft V1 fabric: wide fused
+     rays, gentle variation, no hard cores — like storm footage */
+  const softHi=smoothstep((kpn-.58)/.32);
   g.globalCompositeOperation="lighter";
   for(let ci=0;ci<curtains.length;ci++){
     const c=curtains[ci];
@@ -1634,9 +1638,9 @@ function drawCurtains(g,sc,pitchPx){
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
     /* thin, near-vertical rays: narrow base width, varied per ray */
-    const rwBase=isRibbon?Math.max(1.0,dx*.95)
+    const rwBase=isRibbon?Math.max(1.0,dx*(0.95+softHi*.6))
                 :c.soft?Math.max(2.0,dx*1.9)
-                :Math.max(1.0,dx*(1.15+near*.45));
+                :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi));
     const drift=t*c.driftSpd*40*(1+kpn*.9);
     const hBase=isRibbon
       ? gh*(.05+.07*p)
@@ -1668,10 +1672,11 @@ function drawCurtains(g,sc,pitchPx){
       const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
       /* strong per-ray intensity variation: some rays barely there */
       const rayNoise=c.n3(u*7.0+c.phase+tt*.12);
-      const rayVar=c.soft? (.75+.25*clamp(rayNoise*.5+.5,0,1))
-                         : (.45+.55*clamp(rayNoise*.5+.5,0,1));
+      const softLike=c.soft?1:softHi;
+      const rayVar=lerp(.45+.55*clamp(rayNoise*.5+.5,0,1),
+                        .75+.25*clamp(rayNoise*.5+.5,0,1),softLike);
       let inten=vis*iN*(.45+.55*near)*rayVar;
-      if(!c.soft&&!isRibbon) inten*=.88;
+      if(!c.soft&&!isRibbon) inten*=lerp(.88,1.1,softHi);
       if(isRibbon) inten*=1.35;
       if(c.soft)   inten*=1.7;      /* the veil body glows like V1 did */
       inten*=.86+.14*Math.sin(t*(5.5+i*.37)+i*2.1);
@@ -1692,11 +1697,15 @@ function drawCurtains(g,sc,pitchPx){
       let bucket=clamp(Math.round((bucketBase*.75+iN*.25*bucketBase*1.4)*(RAY_BUCKETS-1)),0,RAY_BUCKETS-1);
       if(bucket>bucketMax) bucket=bucketMax;
       const hueN=c.n1(u*1.7+c.phase*.6+t*.012)+c.n3(u*.7-t*.008)*.5;
-      const hue=hueN<-.24?1:(hueN>.52?3:(hueN>.26?2:0));
+      /* storm skies carry broad pink / violet / teal bands like the
+         footage from real Kp8-9 nights */
+      const tealTh=-.24+softHi*.08, lavTh=.52-softHi*.14,
+            sprTh=.26-softHi*.05, pinkTh=.68-softHi*.22;
+      const hue=hueN<tealTh?1:(hueN>pinkTh?4:(hueN>lavTh?3:(hueN>sprTh?2:0)));
       g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
-      if((iN>.72||isRibbon) && inten>.14 && !c.soft){
+      if((iN>.72||isRibbon) && inten>.14 && !c.soft && softHi<.65){
         const coreW=Math.max(.8,rw*.22);
         g.globalAlpha=clamp(inten*.27,0,.42);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
@@ -1712,14 +1721,17 @@ function drawCurtains(g,sc,pitchPx){
       const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
       const vs=gw*(.16+.10*(curtains[0].n3(k*1.9)*.5+.5));
       g.globalAlpha=vA*(.6+.4*Math.sin(sim.t*.3+k*2.2));
-      const vc=k%3===0?mixRGB(P.green,[56,214,255],.4):(k%3===1?P.green:mixRGB(P.green,[186,140,255],.35));
+      const vc=k%4===0?mixRGB(P.green,[56,214,255],.4)
+             :k%4===1?P.green
+             :k%4===2?mixRGB(P.green,[186,140,255],.35)
+             :mixRGB(P.green,[255,118,196],.42);
       g.drawImage(tintSprite(SPR.soft,vc),vx-vs,vy-vs*.6,vs*2,vs*1.2);
     }
   }
   /* overhead corona at Kp 8-9: curtains seen from below, converging on a
      seeded zenith point — clustered, uneven, soft; not a starburst */
   if(S.kp>=8 && perf.coronaScale>0 && !isMobile && !REDUCED){
-    const cor=clamp((S.kp-7.5)/1.5,0,1)*clamp(p*1.25,0,1)*perf.coronaScale;
+    const cor=clamp((S.kp-7.5)/1.5,0,1)*clamp(p*1.25,0,1)*perf.coronaScale*.55;
     if(cor>.03){
       const cr1=mulberry32(SEED^0x7c0)(), cr2=mulberry32(SEED^0x7c1)();
       const ccx=gw*(.36+cr1*.28), ccy=gh*(.13+cr2*.08)+pitchPx*sc*1.1;
