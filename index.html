@@ -1565,8 +1565,8 @@ function buildCurtains(){
   /* 7 logical layers: 2 faint background curtains, 2 medium, 2 strong,
      and 1 thin bright ribbon — tuned to read as ONE aurora system */
   const TYPES=[
-    {kind:"curtain",depth:.98,thresh:.02},
-    {kind:"curtain",depth:.84,thresh:.06},
+    {kind:"curtain",depth:.98,thresh:.02,soft:true},
+    {kind:"curtain",depth:.84,thresh:.06,soft:true},
     {kind:"curtain",depth:.62,thresh:.13},
     {kind:"curtain",depth:.46,thresh:.22},
     {kind:"curtain",depth:.24,thresh:.34},
@@ -1577,6 +1577,7 @@ function buildCurtains(){
     const T=TYPES[i];
     curtains.push({
       kind:T.kind,
+      soft:!!T.soft,          /* V1-style wide fused rays: the aurora's body */
       depth:clamp(T.depth+(rnd()-.5)*.06,0,1),
       thresh:T.thresh,
       rays:rayCountFor(T.kind),
@@ -1632,7 +1633,9 @@ function drawCurtains(g,sc,pitchPx){
     const nRays=c.rays;
     const dx=spanW/(nRays-1);
     /* thin, near-vertical rays: narrow base width, varied per ray */
-    const rwBase=isRibbon?Math.max(1.0,dx*.95):Math.max(1.0,dx*(1.15+near*.45));
+    const rwBase=isRibbon?Math.max(1.0,dx*.95)
+                :c.soft?Math.max(2.0,dx*1.9)
+                :Math.max(1.0,dx*(1.15+near*.45));
     const drift=t*c.driftSpd*40*(1+kpn*.9);
     const hBase=isRibbon
       ? gh*(.05+.07*p)
@@ -1662,8 +1665,11 @@ function drawCurtains(g,sc,pitchPx){
       const iN=.45+.55*c.n3(u*4.7-tt*.07+c.phase*.6);
       /* strong per-ray intensity variation: some rays barely there */
       const rayNoise=c.n3(u*7.0+c.phase+tt*.12);
-      let inten=vis*iN*(.45+.55*near)*(.45+.55*clamp(rayNoise*.5+.5,0,1));
+      const rayVar=c.soft? (.75+.25*clamp(rayNoise*.5+.5,0,1))
+                         : (.45+.55*clamp(rayNoise*.5+.5,0,1));
+      let inten=vis*iN*(.45+.55*near)*rayVar;
       if(isRibbon) inten*=1.5;
+      if(c.soft)   inten*=1.7;      /* the veil body glows like V1 did */
       inten*=.86+.14*Math.sin(t*(5.5+i*.37)+i*2.1);
       if(surgePos>-1){
         const d=Math.abs(u-surgePos);
@@ -1671,7 +1677,8 @@ function drawCurtains(g,sc,pitchPx){
       }
       if(inten<=.012) continue;
       /* per-ray width: thin, medium, a few wide, some hairline */
-      const wN=.4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
+      const wN=c.soft? .85+.3*Math.abs(c.n2(u*11+c.phase*1.7))
+                     : .4+.9*Math.abs(c.n2(u*11+c.phase*1.7));
       const rw=rwBase*wN;
       const hgt=hBase*hN*(.6+.7*iN);
       /* a ray too short would read as a glowing stub — fade it away */
@@ -1685,7 +1692,7 @@ function drawCurtains(g,sc,pitchPx){
       g.globalAlpha=clamp(inten*.68,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
-      if((iN>.72||isRibbon) && inten>.14){
+      if((iN>.72||isRibbon) && inten>.14 && !c.soft){
         const coreW=Math.max(.8,rw*.22);
         g.globalAlpha=clamp(inten*.34,0,.5);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
@@ -1693,9 +1700,9 @@ function drawCurtains(g,sc,pitchPx){
     }
   }
   /* veil / patch: big soft dim pools of light behind everything */
-  if(p>.36){
+  if(p>.30){
     const nV=isMobile?3:5;
-    const vA=clamp((p-.36)*.16,0,.09);
+    const vA=clamp((p-.30)*.2,0,.12);
     for(let k=0;k<nV;k++){
       const vx=gw*(.12+.76*(curtains[0].n1(k*3.17+sim.t*.008)*.5+.5));
       const vy=(horizonY*sc)-gh*(.16+.20*(curtains[0].n2(k*2.3-sim.t*.006)*.5+.5))+pitchPx*sc;
