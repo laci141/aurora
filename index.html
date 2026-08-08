@@ -1708,8 +1708,12 @@ function drawCurtains(g,sc,pitchPx){
       if(bucket>bucketMax) bucket=bucketMax;
       const gx=x/gw;
       /* per-ray dither feathers the colour-field borders into gradual
-         mixed zones — no hard walls between colours */
-      const dith=c.n3(u*37.0+c.phase*3.1)*.14;
+         mixed zones; the blend width grows with Kp:
+         ~30% at Kp3, 35% at Kp7, 60% at Kp9 */
+      const blend=kpn<=.333?.30
+                 :kpn<=.778?lerp(.30,.35,(kpn-.333)/.445)
+                 :lerp(.35,.60,clamp((kpn-.778)/.222,0,1));
+      const dith=c.n3(u*37.0+c.phase*3.1)*blend*.5;
       const hueN=curtains[0].n1(gx*3.2+t*.012)+curtains[0].n3(gx*1.3-t*.008)*.5+dith;
       /* two noise axes: a warm band system led by pink, over a cool
          green/teal base — band widths grow with storm strength */
