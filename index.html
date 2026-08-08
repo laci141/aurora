@@ -1636,8 +1636,9 @@ function drawCurtains(g,sc,pitchPx){
   const softCol=Math.min(softHi,.84);
   /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
   /* storm rays broaden into wide soft columns: x2.5 at Kp7, x3.5 at Kp9 */
-  const wMul=kpn<=.55?1
-           :kpn<=.78?lerp(1,2.5,(kpn-.55)/.23)
+  const wMul=kpn<=.333?lerp(1,1.5,clamp(kpn/.333,0,1))
+           :kpn<=.55?lerp(1.5,2.0,(kpn-.333)/.217)
+           :kpn<=.78?lerp(2.0,2.5,(kpn-.55)/.23)
            :lerp(2.5,3.5,clamp((kpn-.78)/.22,0,1));
   /* wider rays carry the same light spread out — keep the sky from clipping */
   const wNorm=1/Math.pow(wMul,.9);
