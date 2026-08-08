@@ -1627,6 +1627,12 @@ function drawCurtains(g,sc,pitchPx){
   /* above ~Kp6 the display melts toward the soft V1 fabric: wide fused
      rays, gentle variation, no hard cores — like storm footage */
   const softHi=smoothstep((kpn-.58)/.32);
+  /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
+  const softCol=Math.min(softHi,.84);
+  /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
+  const hb=kpn<=.55?lerp(1.0,1.30,clamp((kpn-.30)/.25,0,1))
+         :kpn<=.78?lerp(1.30,1.50,(kpn-.55)/.23)
+         :lerp(1.50,1.25,clamp((kpn-.78)/.22,0,1));
   g.globalCompositeOperation="lighter";
   for(let ci=0;ci<curtains.length;ci++){
     const c=curtains[ci];
@@ -1646,9 +1652,9 @@ function drawCurtains(g,sc,pitchPx){
                 :c.soft?Math.max(2.0,dx*1.9)
                 :Math.max(1.0,dx*lerp(1.15+near*.45,1.9,softHi));
     const drift=t*c.driftSpd*40*(1+kpn*.9);
-    const hBase=isRibbon
+    const hBase=(isRibbon
       ? gh*(.05+.07*p)
-      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn);
+      : gh*(.10+.50*p*near+.05*near)*(.75+.55*kpn))*hb;
     const bucketBase=clamp(p*1.15+depth*.05,0,1);
     /* not every layer carries red — oxygen 630nm is patchy in reality */
     const bucketMax=Math.round((RAY_BUCKETS-1)*(.55+.45*c.redSeed));
@@ -1709,8 +1715,8 @@ function drawCurtains(g,sc,pitchPx){
          green/teal base — band widths grow with storm strength */
       const warm=curtains[0].n2(gx*2.4+t*.010)+dith*.8;
       let hue;
-      if(warm>.28-softHi*.14){
-        const w2=clamp((warm-(.28-softHi*.14))/.6,0,1);
+      if(warm>.28-softCol*.14){
+        const w2=clamp((warm-(.28-softCol*.14))/.6,0,1);
         hue=w2<.40?4:(w2<.58?3:(w2<.72?8:(w2<.86?5:6)));
       }else{
         hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
