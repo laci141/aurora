@@ -783,10 +783,10 @@ function buildSprites(){
         g.beginPath(); g.ellipse(bx,by,br*(1.2+rnd()),br,rnd()*TAU,0,TAU); g.fill();
       }
     }
-    /* polar ice */
-    g.fillStyle="rgba(235,245,255,.85)";
-    g.beginPath(); g.ellipse(r,r*.14,r*.55,r*.16,0,0,TAU); g.fill();
-    g.beginPath(); g.ellipse(r,sz-r*.12,r*.5,r*.14,0,0,TAU); g.fill();
+    /* polar ice: small, dim, warm-tinted so it never glares */
+    g.fillStyle="rgba(226,222,205,.42)";
+    g.beginPath(); g.ellipse(r,r*.12,r*.38,r*.10,0,0,TAU); g.fill();
+    g.beginPath(); g.ellipse(r,sz-r*.10,r*.34,r*.09,0,0,TAU); g.fill();
     /* cloud swirls: elongated soft streaks at varied angles */
     for(let k=0;k<20;k++){
       const cx=r+(rnd()-.5)*sz*.8, cy=r+(rnd()-.5)*sz*.8;
@@ -815,7 +815,7 @@ function buildRaySprites(force){
   if(!force && key===raySpritesKey) return;
   raySpritesKey=key;
   const boost=1+S.boost/100;
-  const WHT=[255,255,255];
+  const WHT=[255,236,200];   /* warm white: built-in blue-light filter */
   /* three hue families along every curtain, like in real photographs:
      emerald, teal-cyan and spring yellow-green */
   const HUES=[P.green,                                /* 0 green — dominant   */
@@ -1345,15 +1345,20 @@ function drawCusps(){
   for(const pole of [-1,1]){
     const spread=lerp(.35,1.15,clamp(p,0,1));
     const ry=R*(.55+spread*.55), rx=R*(1.02+spread*.18);
-    ctx.globalAlpha=clamp(.18+p*.7,0,.95);
-    ctx.strokeStyle=rgb(P.green,1);
-    ctx.lineWidth=Math.max(1.1,R*(.14+p*.22));
-    ctx.beginPath();
-    ctx.ellipse(x,y+pole*R*.72,rx*.55,ry*.30,0,0,TAU);
-    ctx.stroke();
+    /* dotted auroral ovals: thin orange beads, darker than before */
+    const nd=22;
+    const ds=Math.max(.6,R*(.042+p*.066));
+    const oc=[235,142,52];
+    for(let di=0;di<nd;di++){
+      const a=di/nd*TAU+sim.t*.15*pole;
+      const px=x+Math.cos(a)*rx*.55;
+      const py=y+pole*R*.72+Math.sin(a)*ry*.30;
+      ctx.globalAlpha=clamp(.09+p*.42,0,.6)*(.7+.3*Math.sin(a*3+sim.t*1.2));
+      ctx.drawImage(tintSprite(SPR.dot,oc),px-ds,py-ds,ds*2,ds*2);
+    }
     const gr=R*(4+p*5);
-    ctx.globalAlpha=clamp(.10+p*.42,0,.8);
-    ctx.drawImage(tintSprite(SPR.soft,P.green),x-gr/2,y+pole*R*.85-gr/2,gr,gr);
+    ctx.globalAlpha=clamp(.06+p*.28,0,.5);
+    ctx.drawImage(tintSprite(SPR.soft,[235,150,60]),x-gr/2,y+pole*R*.85-gr/2,gr,gr);
   }
   /* flashes where particles hit the atmosphere */
   for(const f of sim.flashes){
@@ -1666,6 +1671,8 @@ function drawCurtains(g,sc,pitchPx){
   /* above ~Kp6 the display melts toward the soft V1 fabric: wide fused
      rays, gentle variation, no hard cores — like storm footage */
   const softHi=smoothstep((kpn-.58)/.32);
+  /* extreme storms must not blow out into huge white patches */
+  const overd=1-.35*smoothstep((sim.effKp-7)/2);
   /* Kp9 colours sit midway between the Kp7 and Kp9 looks */
   const softCol=Math.min(softHi,.84);
   /* the aurora reaches higher: +30% at Kp5, +50% at Kp7, +25% at Kp9 */
@@ -1742,7 +1749,7 @@ function drawCurtains(g,sc,pitchPx){
       inten*=.86+.14*Math.sin(t*(5.5+i*.37)+i*2.1);
       if(surgePos>-1){
         const d=Math.abs(u-surgePos);
-        inten*=1+2.6*Math.exp(-d*d*160);
+        inten*=1+1.7*Math.exp(-d*d*320);
       }
       if(inten<=.012) continue;
       /* per-ray width: thin, medium, a few wide, some hairline */
@@ -1771,16 +1778,16 @@ function drawCurtains(g,sc,pitchPx){
       let hue;
       if(warm>.28-softCol*.14){
         const w2=clamp((warm-(.28-softCol*.14))/.6,0,1);
-        hue=w2<.40?4:(w2<.58?3:(w2<.72?8:(w2<.86?5:6)));
+        hue=w2<.34?4:(w2<.50?3:(w2<.62?8:(w2<.82?5:6)));
       }else{
         hue=hueN<-.62?7:(hueN<-.24?1:(hueN>.30?2:0));
       }
-      g.globalAlpha=clamp(inten*.68*wNorm,0,.94);
+      g.globalAlpha=clamp(inten*.68*wNorm*overd,0,.94);
       g.drawImage(raySprites[hue][bucket], x-rw*.5, y-hgt, rw, hgt);
       /* bright ray core: only the strongest rays get a narrow hot centre */
       if((iN>.72||isRibbon) && inten>.14 && !c.soft && softHi<.65){
         const coreW=Math.max(.8,rw*.22);
-        g.globalAlpha=clamp(inten*.27*wNorm,0,.42);
+        g.globalAlpha=clamp(inten*.27*wNorm*overd,0,.42);
         g.drawImage(raySprites[hue][bucket], x-coreW*.5, y-hgt*.90, coreW, hgt*.72);
       }
     }
@@ -1882,8 +1889,11 @@ function moonSprite(phase){
 }
 function drawMoon(alpha,pitchPx){
   const rnd=mulberry32(SEED^0x3007);
-  const mx=W*(.16+rnd()*.66);
-  const my=H*(.10+rnd()*.16)+pitchPx*.35+Math.sin(sim.t*.008)*H*.01;
+  /* it rises on the left, arcs up and sets on the right — a full pass
+     takes ~9 minutes at 1x, barely perceptible motion */
+  const trav=((sim.t/540)+rnd())%1;
+  const mx=W*(.06+.88*trav);
+  const my=H*.30-Math.sin(trav*Math.PI)*H*.21+pitchPx*.35;
   const r=Math.max(16,Math.min(W,H)*.028);
   /* a full cycle takes ~4 minutes at 1x — visibly growing and shrinking */
   const phase=(.5+sim.t/240)%1;
@@ -2341,6 +2351,7 @@ function setPalette(i){
   document.querySelectorAll(".pal").forEach((b,j)=>b.classList.toggle("on",j===i));
   pushURL();
 }
+function starSpdCap(){ return clamp(Math.round(5000/Math.max(10,S.stars)),10,100); }
 function refreshReadouts(){
   $("kpVal").textContent=fmt(S.kp);
   $("kpEff").textContent=fmt(sim.effKp,1);
@@ -2450,9 +2461,9 @@ function frame(now){
   }
   /* auto star density: wanders randomly and smoothly between 10 and 250% */
   if(S.autoStars && !REDUCED){
-    /* paced only by the star-speed slider (10-100% -> 0.1x-1.0x),
-       independent of the storm tab's time speed */
-    const starPace=S.starSpd/100;
+    /* paced by the star-speed slider, capped so density x speed stays
+       within a ~5000 budget (250% -> max 20%, 100% -> max 50%, 10% -> 100%) */
+    const starPace=Math.min(S.starSpd,starSpdCap())/100;
     starAutoT-=dt*starPace;
     if(starAutoT<=0){ starTarget=10+Math.random()*240; starAutoT=9+Math.random()*13; }
     S.stars=lerp(S.stars,starTarget,1-Math.pow(.75,dt*starPace));
@@ -2529,6 +2540,7 @@ function initUI(){
   $("kp").value=S.kp; $("speed").value=S.speed; $("pitch").value=S.pitch;
   $("zoom").value=S.zoom; $("snowSpd").value=S.snowSpd; $("boost").value=S.boost; $("bloom").value=S.bloom; $("stars").value=S.stars;
   $("autoStorm").checked=S.auto; $("perfGuard").checked=S.perf;
+  S.starSpd=Math.min(S.starSpd,starSpdCap());
   $("autoPal").checked=S.autoPal; $("autoStars").checked=S.autoStars; $("starSpd").value=S.starSpd;
 
   bindRange("kp","kp",()=>{ $("kpDesc").textContent=T("kpDesc")[S.kp]; });
@@ -2537,7 +2549,10 @@ function initUI(){
   bindRange("zoom","zoom");
   bindRange("boost","boost",()=>buildRaySprites(true));
   bindRange("bloom","bloom");
-  bindRange("stars","stars",()=>{buildStarLayer();spaceStars=null;});
+  bindRange("stars","stars",()=>{
+    buildStarLayer();spaceStars=null;
+    if(S.starSpd>starSpdCap()){ S.starSpd=starSpdCap(); $("starSpd").value=S.starSpd; }
+  });
   bindSwitch("autoStorm","auto");
   bindSwitch("drift","drift");
   bindSwitch("tField","field");
@@ -2549,7 +2564,9 @@ function initUI(){
   bindSwitch("tLabels","labels");
   bindSwitch("autoPal","autoPal");
   bindSwitch("autoStars","autoStars");
-  bindRange("starSpd","starSpd");
+  bindRange("starSpd","starSpd",()=>{
+    if(S.starSpd>starSpdCap()){ S.starSpd=starSpdCap(); $("starSpd").value=S.starSpd; }
+  });
   bindSwitch("perfGuard","perf");
 
   $("btnSky").onclick=()=>setView("sky");
